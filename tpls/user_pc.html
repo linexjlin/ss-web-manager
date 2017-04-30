@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <!-- 若您需要使用Kendo UI Professional，请联系版权人获得合法的授权或许可。 -->
+    <!-- Bootstrap css -->
+    <link href="https://o.qcloud.com/static_api/v3/assets/bootstrap-3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <!-- kendo ui css -->
+    <link href="https://o.qcloud.com/static_api/v3/assets/kendoui-2015.2.624/styles/kendo.common.min.css" rel="stylesheet">
+    <link href="https://o.qcloud.com/static_api/v3/assets/kendoui-2015.2.624/styles/kendo.default.min.css" rel="stylesheet">
+    <!-- font-awesome -->
+    <link href="https://o.qcloud.com/static_api/v3/assets/fontawesome/css/font-awesome.css" rel="stylesheet">
+    <!--蓝鲸提供的公用样式库 -->
+    <link href="https://o.qcloud.com/static_api/v3/bk/css/bk.css?v=1.0.1" rel="stylesheet">
+    <link href="https://o.qcloud.com/static_api/v3/bk/css/bk_pack.css" rel="stylesheet">
+    <!-- 如果要使用Bootstrap的js插件，必须先调入jQuery -->
+    <script src="https://o.qcloud.com/static_api/v3/assets/js/jquery-1.10.2.min.js"></script>
+    <!-- 包括所有bootstrap的js插件或者可以根据需要使用的js插件调用　-->
+    <script src="https://o.qcloud.com/static_api/v3/assets/bootstrap-3.3.4/js/bootstrap.min.js"></script>
+    <!-- 包括所有kendoui的js插件或者可以根据需要使用的js插件调用　-->
+    <script src="https://o.qcloud.com/static_api/v3/assets/kendoui-2015.2.624/js/kendo.all.min.js"></script>
+    <script src="https://o.qcloud.com/static_api/v3/bk/js/bk.js"></script>
+    <!-- 数据埋点统计 -->
+    <script src="https://o.qcloud.com/static_api/analysis.js"></script>
+    <!-- 以下两个插件用于在IE8以及以下版本浏览器支持HTML5元素和媒体查询，如果不需要用可以移除 -->
+    <!--[if lt IE 9]><script src="https://o.qcloud.com/static_api/v3/assets/js/html5shiv.min.js"></script><script src="https://o.qcloud.com/static_api/v3/assets/js/respond.min.js"></script><![endif]-->
+</head>
+
+<body class="bg-white" data-bg-color="bg-white">
+    <div class="king-page-box">
+        <div class="king-container clearfix">
+            <nav class="">
+                <div style="overflow:hidden; z-index: inherit;" class="navbar king-horizontal-nav1 king-horizontal-primary f14">
+                    <div class="navbar-container">
+                        <div class="navbar-header pull-left">
+                            <a class="navbar-brand" href="javascript:;">
+                                <img src="https://o.qcloud.com/static_api/v3/bk/images/logo.png" class="logo"> </a>
+                        </div>
+                        <ul class="nav navbar-nav pull-left m0">
+                            <li class="active"><a href="javascript:void(0);">首页</a></li>
+                            <li><a href="javascript:void(0);">关于我们</a></li>
+                            <li><a href="javascript:void(0);">联系我们</a></li>
+                        </ul>
+                        <div class="navbar-header pull-right">
+                            <ul class="nav">
+                                <li class="user-info">
+                                    <a href="javascript:;">
+                                        <img class="img-rounded" src="https://o.qcloud.com/static_api/v3/components/horizontal_nav1/images/avatar.png">
+					<span>{{.Name}}</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            <div class="panel mb0 panel-box  ">
+                <div class="list-justified-container">
+                    <ul class="list-justified text-center">
+                        <li>
+                            <p class="f24">类型</p>
+			    <p>{{.Type}}</p>
+                        </li>
+                        <li>
+                            <p class="f24">剩余时间</p>
+			    <p>{{.DayRemains}}</p>
+                        </li>
+                        <li>
+                            <p class="f24">剩余流量</p>
+			    <p>{{.TrafficRemains}}</p>
+                        </li>
+                             <li>
+                            <p class="f24">已经使用</p>
+			    <p>{{.UsedTraffic}}</p>
+                        </li>                   
+
+                    </ul>
+                </div>
+            </div>
+            <!-- 设置面板Start -->
+            <!-- 设置面板End -->
+            <div class="king-block king-block-bordered king-block-themed mb0">
+                <div class="king-block-header king-info">
+                    <ul class="king-block-options">
+                        <li>
+                            <!-- <button type="button"><i class="fa fa-cog"></i></button> -->
+                        </li>
+                    </ul>
+                    <h3 class="king-block-title">节点列表</h3>
+                </div>
+                <div class="king-block-content">
+                    <table class="table mb0 pr15 ranger-box2  ">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">#</th>
+                                <th style="width: 15%;">名称</th>
+                                <th style="width: 15%;">位置</th>
+                                <th style="width: 15%;">日期</th>
+                                <th style="width: 15%;">类型</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                        </tbody>
+                    </table>
+                    <template id="header_tpl_14930069041302">
+                        <tr>
+                            <th style="width: 70px;">#name#</th>
+                            <th style="width: 5%;">#location#</th>
+                            <th style="width: 5%;">#ip#</th>
+                            <th style="width: 5%;">#port#</th>
+                            <th style="width: 8%;">#method#</th>
+                            <th style="width: 5%;">#key#</th>
+                            <th style="width: 5%;">#status#</th>
+                            <th style="width: 5%;">#qrcode#</th>
+                            <th>操作</th>
+                        </tr>
+                    </template>
+                    <template id="tpl_14930069041302">
+                        <tr>
+                            <td style="width: 70px;">#name#</td>
+                            <td style="width: 5%;">#location#</td>
+                            <td style="width: 5%;">#ip#</td>
+                            <td style="width: 5%;">#port#</td>
+                            <td style="width: 8%;">#method#</td>
+                            <td style="width: 5%;">#key#</td>
+                            <td style="width: 5%;">#status#</td>
+                            <td style="width: 5%;">#qrcode#</td>
+                            <td>
+                                <button class="btn btn-xs btn-success"> <i class="glyphicon glyphicon-ok"></i> </button>
+                                <button class="btn btn-xs btn-warning"> <i class="glyphicon glyphicon-edit"></i> </button>
+                                <button class="btn btn-xs btn-danger"> <i class="glyphicon glyphicon-remove"></i> </button>
+                            </td>
+                        </tr>
+                    </template>
+                    <!-- 设置面板End -->
+                </div>
+            </div>
+            <div class="king-block king-block-bordered king-block-themed mb0">
+                <div class="king-block-header king-info">
+                    <ul class="king-block-options">
+                        <li>
+                            <!-- <button type="button"><i class="fa fa-cog"></i></button> -->
+                        </li>
+                    </ul>
+                    <h3 class="king-block-title">近期使用详细</h3>
+                </div>
+                <div class="king-block-content">
+                    <div style="height: 300px; position: relative;" id="chart_1493006930851" class="king-chart-box chart-bar  k-chart" data-role="chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function(){
+                function renderTpl(str, cfg) {
+                    var re = /(#(.+?)#)/g;
+
+                    return str.replace(re, function() {
+                        var val = cfg[arguments[2]]+'';
+                        if(typeof val == 'undefined') {
+                            val = '';
+                        }
+                        return val;
+                    });
+                }
+
+                // 异步请求后台数据
+                $.ajax({
+                    url: '/api/myservers.json',
+                    type: 'GET',
+                    success: function(res){
+                        var _html = ' ';
+                        var list = res.items;
+                        var tpl = $('#tpl_14930069041302').html();
+                        var headerTpl =  $('#header_tpl_14930069041302').html();
+                        for (var i=0,len=list.length; i < len; i++){
+                            var item = list[i];
+                            _html += renderTpl(tpl, item)
+                        }
+                        $('.ranger-box2 tbody').html(_html);
+                        $('.ranger-box2 thead').html(renderTpl(headerTpl,res.catalogues));
+                    }
+                });
+            });
+    </script>
+    <script>
+        // 创建图表
+        function createKendoBarChart(conf){
+            $(conf.selector).kendoChart({
+                legend: {
+                    position: "top"
+                },
+                theme : 'bootstrap',
+                categoryAxis : {
+                    majorGridLines : {
+                        visible: false
+                    },
+                    categories : conf.data.categories
+                },
+                seriesDefaults : {
+                    type: "column"
+                },
+                series : conf.data.series,
+                valueAxis : {
+                    max: 200,
+                    line: {
+                        visible: false
+                    },
+                    minorGridLines: {
+                        visible: false
+                    },
+                    labels : {
+                        rotation: "auto"
+                    }
+                },
+                tooltip: {
+                    visible : true,
+                    template: "#= series.name # #= value #"
+                }
+            });
+            $(window).resize(function(){
+                $(conf.selector).data("kendoChart").refresh();
+            });
+        }
+
+        function initKendoBarChart(conf){
+            // 异步请求后台数据
+            $.ajax({
+                url: conf.url,
+                type: 'GET',
+                dataType: conf.dataType,
+                success: function(res){
+                    //获取数据成功
+                    if (res.result){
+                        var data = {
+                            series: res.data.series,
+                            categories: res.data.categories
+                        };
+                        createKendoBarChart({
+                            selector: conf.container, // 图表窗器
+                            data: data // 图表数据
+                        });
+                    }
+                }
+            });
+        }
+    </script>
+    <script>
+        $(function(){
+            initKendoBarChart({
+		url: '/api/mytraffic.json',
+                dataType: 'json',
+                container: '#chart_1493006930851'
+            });
+        });
+    </script>
+</body>
+
+</html>
