@@ -1,1 +1,1 @@
-# Multi user Manager for [shadowsocks](/shadowsocks/shadowsocks-libev)
+# Multi user Manager for [shadowsocks](https://github.com/shadowsocks/shadowsocks-libev)
