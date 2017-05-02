@@ -33,7 +33,7 @@ type UserServes struct {
 func user(w http.ResponseWriter, r *http.Request) {
 	ubi := UserBasicInfo{}
 	getUserBasicInfo("101", &ubi)
-	t, err := template.ParseFiles("tpls/user_pc.html")
+	t, err := template.ParseFiles("tpls/user_pc.html", "tpls/head.tpl", "tpls/nav.tpl")
 	//t, err := template.ParseFiles("tpls/user.html")
 	if err != nil {
 		fmt.Println(err)
@@ -91,6 +91,12 @@ func session2userId(session string) (userId string) {
 	return "101"
 }
 
+func login(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
+	checkError(err)
+	t.Execute(w, nil)
+}
+
 func myservers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
@@ -104,7 +110,7 @@ func myservers(w http.ResponseWriter, r *http.Request) {
 }
 
 func admin(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("tpls/user_admin.html")
+	t, err := template.ParseFiles("tpls/user_admin.html", "tpls/head.tpl", "tpls/nav.tpl")
 	checkError(err)
 	t.Execute(w, nil)
 }
@@ -166,10 +172,58 @@ func servers(w http.ResponseWriter, r *http.Request) {
 	w.Write(jdata)
 }
 
+func newUser(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method == "GET" {
+		t, err := template.ParseFiles("tpls/new_user.html")
+		checkError(err)
+		t.Execute(w, nil)
+	}
+
+	if r.Method == "POST" {
+		r.ParseForm()
+		name := r.FormValue("name")
+		password := r.FormValue("password")
+		email := r.FormValue("email")
+		if name == "" || password == "" || email == "" {
+			http.NotFound(w, r)
+		}
+		err := addUser(name, password, email)
+		checkError(err)
+	}
+}
+
+func newServer(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		t, err := template.ParseFiles("tpls/new_server.html")
+		checkError(err)
+		t.Execute(w, nil)
+	}
+
+	if r.Method == "POST" {
+		r.ParseForm()
+		ip := r.FormValue("ip")
+		name := r.FormValue("name")
+		location := r.FormValue("location")
+		managerPort := r.FormValue("port")
+		method := r.FormValue("method")
+		//fmt.Println(ip, name, location, managerPort, managerPort, method)
+		if ip == "" || managerPort == "" || method == "" {
+			http.NotFound(w, r)
+		}
+		err := addServer(ip, name, location, managerPort, method)
+		checkError(err)
+	}
+
+}
+
 func main() {
 	dbSetup("./redisDB/redis.sock")
+	http.HandleFunc("/login", login)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)
+	http.HandleFunc("/new_user", newUser)
+	http.HandleFunc("/new_server", newServer)
 	http.HandleFunc("/api/myservers.json", myservers)
 	http.HandleFunc("/api/mytraffic.json", UserTrafficDetail)
 	http.HandleFunc("/api/users.json", users)
