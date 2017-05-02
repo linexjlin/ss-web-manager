@@ -166,10 +166,57 @@ func servers(w http.ResponseWriter, r *http.Request) {
 	w.Write(jdata)
 }
 
+func newUser(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method == "GET" {
+		t, err := template.ParseFiles("tpls/new_user.html")
+		checkError(err)
+		t.Execute(w, nil)
+	}
+
+	if r.Method == "POST" {
+		r.ParseForm()
+		name := r.FormValue("name")
+		password := r.FormValue("password")
+		email := r.FormValue("email")
+		if name == "" || password == "" || email == "" {
+			http.NotFound(w, r)
+		}
+		err := addUser(name, password, email)
+		checkError(err)
+	}
+}
+
+func newServer(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		t, err := template.ParseFiles("tpls/new_server.html")
+		checkError(err)
+		t.Execute(w, nil)
+	}
+
+	if r.Method == "POST" {
+		r.ParseForm()
+		ip := r.FormValue("ip")
+		name := r.FormValue("name")
+		location := r.FormValue("location")
+		managerPort := r.FormValue("port")
+		method := r.FormValue("method")
+		//fmt.Println(ip, name, location, managerPort, managerPort, method)
+		if ip == "" || managerPort == "" || method == "" {
+			http.NotFound(w, r)
+		}
+		err := addServer(ip, name, location, managerPort, method)
+		checkError(err)
+	}
+
+}
+
 func main() {
 	dbSetup("./redisDB/redis.sock")
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)
+	http.HandleFunc("/new_user", newUser)
+	http.HandleFunc("/new_server", newServer)
 	http.HandleFunc("/api/myservers.json", myservers)
 	http.HandleFunc("/api/mytraffic.json", UserTrafficDetail)
 	http.HandleFunc("/api/users.json", users)
