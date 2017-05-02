@@ -33,7 +33,7 @@ type UserServes struct {
 func user(w http.ResponseWriter, r *http.Request) {
 	ubi := UserBasicInfo{}
 	getUserBasicInfo("101", &ubi)
-	t, err := template.ParseFiles("tpls/user_pc.html")
+	t, err := template.ParseFiles("tpls/user_pc.html", "tpls/head.tpl", "tpls/nav.tpl")
 	//t, err := template.ParseFiles("tpls/user.html")
 	if err != nil {
 		fmt.Println(err)
@@ -91,6 +91,12 @@ func session2userId(session string) (userId string) {
 	return "101"
 }
 
+func login(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
+	checkError(err)
+	t.Execute(w, nil)
+}
+
 func myservers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
@@ -104,7 +110,7 @@ func myservers(w http.ResponseWriter, r *http.Request) {
 }
 
 func admin(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("tpls/user_admin.html")
+	t, err := template.ParseFiles("tpls/user_admin.html", "tpls/head.tpl", "tpls/nav.tpl")
 	checkError(err)
 	t.Execute(w, nil)
 }
@@ -213,6 +219,7 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	dbSetup("./redisDB/redis.sock")
+	http.HandleFunc("/login", login)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)
 	http.HandleFunc("/new_user", newUser)
