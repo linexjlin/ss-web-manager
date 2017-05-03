@@ -31,10 +31,14 @@ type UserServes struct {
 }
 
 func user(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	session := cookie.Value
+	userId, err := session2userId(session)
+	checkError(err)
+
 	ubi := UserBasicInfo{}
-	getUserBasicInfo("101", &ubi)
+	getUserBasicInfo(userId, &ubi)
 	t, err := template.ParseFiles("tpls/user_pc.html", "tpls/head.tpl", "tpls/nav.tpl")
-	//t, err := template.ParseFiles("tpls/user.html")
 	if err != nil {
 		fmt.Println(err)
 		http.NotFound(w, r)
@@ -78,41 +82,76 @@ func getUserHisto(id string) (h HistoGramData) {
 }
 
 func UserTrafficDetail(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	session := cookie.Value
+	userId, err := session2userId(session)
+	checkError(err)
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	userId := session2userId("session")
 	h := getUserHisto(userId)
 	data, err := json.Marshal(&h)
 	checkError(err)
 	w.Write(data)
 }
 
-func session2userId(session string) (userId string) {
-	return "101"
-}
-
 func login(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
-	checkError(err)
-	t.Execute(w, nil)
+	if r.Method == "GET" {
+		t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
+		checkError(err)
+		t.Execute(w, nil)
+	}
+	if r.Method == "POST" {
+		r.ParseForm()
+		name := r.FormValue("name")
+		password := r.FormValue("password")
+		if checkPassword(name, password) {
+			id, err := getUserId(name)
+			checkError(err)
+			session := fmt.Sprintf("%d%d", time.Now().UnixNano(), time.Now().Unix())
+			fmt.Println(session)
+			expiration := time.Now().Add(30 * 24 * time.Hour)
+			cookie := http.Cookie{Name: "session", Value: session, Expires: expiration}
+			updateSession(session, id)
+			http.SetCookie(w, &cookie)
+			http.Redirect(w, r, "/user", 302)
+		} else {
+			t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
+			checkError(err)
+			t.Execute(w, nil)
+		}
+	}
 }
 
 func myservers(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	session := cookie.Value
+	userId, err := session2userId(session)
+	checkError(err)
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	userId := session2userId("session")
 	servers := UserServes{Catalogues: Ctlg{}}
-	err := getMyServerInfo(&servers, userId)
-	checkError(err)
+	checkError(getMyServerInfo(&servers, userId))
 	serverData, err := json.Marshal(&servers)
 	checkError(err)
 	w.Write(serverData)
 }
 
 func admin(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	session := cookie.Value
+	userId, err := session2userId(session)
+	checkError(err)
+	if !isAdmin(userId) {
+		http.NotFound(w, r)
+		return
+	}
+
 	t, err := template.ParseFiles("tpls/user_admin.html", "tpls/head.tpl", "tpls/nav.tpl")
 	checkError(err)
 	t.Execute(w, nil)
+
 }
 
 type CtlgUsers struct {
@@ -136,6 +175,15 @@ type TUsers struct {
 }
 
 func users(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	session := cookie.Value
+	userId, err := session2userId(session)
+	checkError(err)
+	if !isAdmin(userId) {
+		http.NotFound(w, r)
+		return
+	}
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	//userId := session2userId("session")
@@ -144,6 +192,7 @@ func users(w http.ResponseWriter, r *http.Request) {
 	jdata, err := json.Marshal(&us)
 	checkError(err)
 	w.Write(jdata)
+
 }
 
 type CtlgServers struct {
@@ -162,9 +211,17 @@ type TServes struct {
 }
 
 func servers(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	session := cookie.Value
+	userId, err := session2userId(session)
+	checkError(err)
+	if !isAdmin(userId) {
+		http.NotFound(w, r)
+		return
+	}
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	//userId := session2userId("session")
 	sf := TServes{}
 	getAdminServerInfo(&sf)
 	jdata, err := json.Marshal(&sf)
@@ -173,9 +230,17 @@ func servers(w http.ResponseWriter, r *http.Request) {
 }
 
 func newUser(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	session := cookie.Value
+	userId, err := session2userId(session)
+	checkError(err)
+	if !isAdmin(userId) {
+		http.NotFound(w, r)
+		return
+	}
 
 	if r.Method == "GET" {
-		t, err := template.ParseFiles("tpls/new_user.html")
+		t, err := template.ParseFiles("tpls/new_user.html", "tpls/head.tpl")
 		checkError(err)
 		t.Execute(w, nil)
 	}
@@ -194,8 +259,17 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func newServer(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	session := cookie.Value
+	userId, err := session2userId(session)
+	checkError(err)
+	if !isAdmin(userId) {
+		http.NotFound(w, r)
+		return
+	}
+
 	if r.Method == "GET" {
-		t, err := template.ParseFiles("tpls/new_server.html")
+		t, err := template.ParseFiles("tpls/new_server.html", "tpls/head.tpl")
 		checkError(err)
 		t.Execute(w, nil)
 	}

@@ -22,15 +22,15 @@ func getUserPass(id string) (string, error) {
 	return rds.R.Get("user/password/" + id)
 }
 
-func checkPassword(userName, password string) (pass bool, err error) {
+func checkPassword(userName, password string) (pass bool) {
 	id, err := getUserId(userName)
 	checkError(err)
 	passwd, err := getUserPass(id)
 	checkError(err)
 	if password == passwd {
-		return true, err
+		return true
 	} else {
-		return false, err
+		return false
 	}
 }
 
@@ -201,7 +201,7 @@ func getMyUsersInfo(ui *TUsers) error {
 	ui.Catalogues.Used = "已用流量"
 
 	ids, err := getUserIds()
-	fmt.Println("xxxxxxxxx", ids)
+	//fmt.Println("xxxxxxxxx", ids)
 	checkError(err)
 	for _, id := range ids {
 		i, e := rds.R.MGet(
@@ -296,4 +296,17 @@ func addUser(name, password, email string) error {
 
 	fmt.Println(ret)
 	return err
+}
+
+func updateSession(session, userId string) {
+	rds.R.Set("session/"+session, userId)
+	rds.R.Expire("session/"+session, 60)
+}
+
+func session2userId(session string) (userId string, err error) {
+	return rds.R.Get("session/" + session)
+}
+
+func isAdmin(userId string) bool {
+	return false
 }
