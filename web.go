@@ -31,10 +31,11 @@ type UserServes struct {
 }
 
 func user(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	session := cookie.Value
-	userId, err := session2userId(session)
-	checkError(err)
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 301)
+		return
+	}
 
 	ubi := UserBasicInfo{}
 	getUserBasicInfo(userId, &ubi)
@@ -82,10 +83,11 @@ func getUserHisto(id string) (h HistoGramData) {
 }
 
 func UserTrafficDetail(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	session := cookie.Value
-	userId, err := session2userId(session)
-	checkError(err)
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
@@ -124,10 +126,11 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func myservers(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	session := cookie.Value
-	userId, err := session2userId(session)
-	checkError(err)
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
@@ -139,12 +142,9 @@ func myservers(w http.ResponseWriter, r *http.Request) {
 }
 
 func admin(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	session := cookie.Value
-	userId, err := session2userId(session)
-	checkError(err)
+	userId, err := session2userId(getSession(r))
 	if !isAdmin(userId) {
-		http.NotFound(w, r)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -174,19 +174,20 @@ type TUsers struct {
 	Items      []CtlgUsers `json:"items"`
 }
 
-func users(w http.ResponseWriter, r *http.Request) {
+func getSession(r *http.Request) string {
 	cookie, err := r.Cookie("session")
-	session := cookie.Value
-	userId, err := session2userId(session)
 	checkError(err)
+	return cookie.Value
+}
+func users(w http.ResponseWriter, r *http.Request) {
+	userId, err := session2userId(getSession(r))
 	if !isAdmin(userId) {
-		http.NotFound(w, r)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	//userId := session2userId("session")
 	us := TUsers{}
 	getMyUsersInfo(&us)
 	jdata, err := json.Marshal(&us)
@@ -211,12 +212,13 @@ type TServes struct {
 }
 
 func servers(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	session := cookie.Value
-	userId, err := session2userId(session)
-	checkError(err)
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 301)
+		return
+	}
 	if !isAdmin(userId) {
-		http.NotFound(w, r)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -230,12 +232,13 @@ func servers(w http.ResponseWriter, r *http.Request) {
 }
 
 func newUser(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	session := cookie.Value
-	userId, err := session2userId(session)
-	checkError(err)
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 301)
+		return
+	}
 	if !isAdmin(userId) {
-		http.NotFound(w, r)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -259,12 +262,13 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func newServer(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	session := cookie.Value
-	userId, err := session2userId(session)
-	checkError(err)
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 301)
+		return
+	}
 	if !isAdmin(userId) {
-		http.NotFound(w, r)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -281,18 +285,17 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 		location := r.FormValue("location")
 		managerPort := r.FormValue("port")
 		method := r.FormValue("method")
-		//fmt.Println(ip, name, location, managerPort, managerPort, method)
 		if ip == "" || managerPort == "" || method == "" {
 			http.NotFound(w, r)
 		}
 		err := addServer(ip, name, location, managerPort, method)
 		checkError(err)
 	}
-
 }
 
 func main() {
 	dbSetup("./redisDB/redis.sock")
+
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)

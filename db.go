@@ -300,7 +300,7 @@ func addUser(name, password, email string) error {
 
 func updateSession(session, userId string) {
 	rds.R.Set("session/"+session, userId)
-	rds.R.Expire("session/"+session, 60)
+	rds.R.Expire("session/"+session, 600)
 }
 
 func session2userId(session string) (userId string, err error) {
@@ -308,5 +308,7 @@ func session2userId(session string) (userId string, err error) {
 }
 
 func isAdmin(userId string) bool {
-	return false
+	admin, err := rds.R.Exists("user/admin/" + userId)
+	checkError(err)
+	return admin
 }

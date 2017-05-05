@@ -1,15 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/linexjlin/ssmmu"
 )
 
+/*
 type MULTIMMU struct {
 	servers []string
 }
+*/
 
 func setup(server string) (mmu *ssmmu.SSMMU) {
 	mmu = ssmmu.NewSSMMU("udp", server)
@@ -18,23 +19,22 @@ func setup(server string) (mmu *ssmmu.SSMMU) {
 
 func add(port int, passwd string, server string) (succ bool, err error) {
 	mmu := setup(server)
-	mmu.Add(port, passwd)
-	return true, nil
+	return mmu.Add(port, passwd)
 }
 
 func remove(port int, server string) (succ bool, err error) {
 	mmu := setup(server)
-	mmu.Remove(port)
-	return true, nil
+	return mmu.Remove(port)
 }
 
 func stat(server string) (statData []byte, err error) {
 	mmu := setup(server)
 	rsp, err := mmu.Stat(time.Second * 15)
-	checkErr(err)
+	checkError(err)
 	return rsp, nil
 }
 
+/*
 func (m *MULTIMMU) Add(port int, passwd string) {
 	for _, s := range m.servers {
 		add(port, passwd, s)
@@ -64,3 +64,4 @@ func (m *MULTIMMU) Stat(timeout time.Duration) (resp []byte, err error) {
 
 	return
 }
+*/
