@@ -54,7 +54,10 @@ func getUserIds() ([]string, error) {
 }
 
 func parseList(prefix, subfix, ikey string) (vs []string, e error) {
-	vv, err := rds.R.Keys(ikey)
+	r := newRedis()
+	fmt.Println("iKey:", ikey)
+	vv, err := r.Keys(ikey)
+	fmt.Println("vv", vv)
 	checkError(err)
 	for _, v := range vv {
 		vs = append(vs, strings.TrimSuffix(strings.TrimPrefix(v, prefix), subfix))
@@ -121,7 +124,8 @@ func getMyServerInfo(servers *UserServes, userId string) error {
 	servers.Catalogues.Qrcode = "二维码"
 	servers.Catalogues.Status = "状态"
 
-	ufs, _ := getUserServerInfo(userId)
+	ufs, err := getUserServerInfo(userId)
+	checkError(err)
 
 	for _, uf := range ufs {
 		server := Ctlg{}
@@ -135,8 +139,8 @@ func getMyServerInfo(servers *UserServes, userId string) error {
 	return nil
 }
 
-func getUserInfo(id string) (ui UserInfo, err error) {
-	uinfos, e := rds.R.MGet(
+func getUserBasicInfo(id string, m *map[string]string) error {
+	ret, e := rds.R.MGet(
 		"user/name/"+id,
 		"user/package/type/"+id,
 		"user/package/expired/"+id,
@@ -148,41 +152,22 @@ func getUserInfo(id string) (ui UserInfo, err error) {
 		"user/ss/port/"+id,
 		"user/ss/password/"+id,
 		"user/traffic/used/"+id)
-	checkError(err)
-	ui.name = uinfos[0]
-	ui.ptype = uinfos[1]
-	expired, e := unixStr2Time(uinfos[2])
 	checkError(e)
-	ui.expired = expired
+	(*m)["Name"] = ret[0]
+	(*m)["Type"] = ret[1]
+	expired, e := unixStr2Time(ret[2])
+	checkError(e)
+	(*m)["DayRemains"] = FloatToString(expired.Sub(time.Now()).Hours()/24, 1) + "天"
 
-	trafficAll, err := strconv.ParseInt(uinfos[3], 10, 64)
-	if err == nil {
-		ui.pTrafficAll = trafficAll
-	}
-	trafficUsed, err := strconv.ParseInt(uinfos[4], 10, 64)
-
-	if err == nil {
-		ui.pUsed = trafficUsed
-	}
-
-	ui.logCnt = uinfos[5]
-	ui.email = uinfos[6]
-	ui.lastLogin = uinfos[7]
-	ui.port = uinfos[8]
-	ui.sskey = uinfos[9]
-	ui.allUsed = uinfos[10]
-
-	return ui, e
-}
-
-func getUserBasicInfo(id string, i *UserBasicInfo) error {
-	ui, err := getUserInfo(id)
+	trafficAll, err := strconv.ParseInt(ret[3], 10, 64)
 	checkError(err)
-	i.Name = ui.name
-	i.DayRemains = FloatToString(ui.expired.Sub(time.Now()).Hours()/24, 1) + "天"
-	i.TrafficRemains = FloatToString(float64(ui.pTrafficAll-ui.pUsed)/1024/1024/1024, 3) + "G"
-	i.UsedTraffic = FloatToString(float64(ui.pUsed)/1024/1024/1024, 3) + "G"
-	i.Type = ui.ptype
+	pTrafficAll := trafficAll
+	trafficUsed, err := strconv.ParseInt(ret[4], 10, 64)
+	checkError(err)
+	pUsed := trafficUsed
+	(*m)["UsedTraffic"] = FloatToString(float64(pUsed)/1024/1024/1024, 3) + "G"
+	(*m)["TrafficRemains"] = FloatToString(float64(pTrafficAll-pUsed)/1024/1024/1024, 3) + "G"
+
 	return nil
 }
 
@@ -201,7 +186,6 @@ func getMyUsersInfo(ui *TUsers) error {
 	ui.Catalogues.Used = "已用流量"
 
 	ids, err := getUserIds()
-	//fmt.Println("xxxxxxxxx", ids)
 	checkError(err)
 	for _, id := range ids {
 		i, e := rds.R.MGet(

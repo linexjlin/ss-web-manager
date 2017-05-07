@@ -37,8 +37,8 @@ func user(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ubi := UserBasicInfo{}
-	getUserBasicInfo(userId, &ubi)
+	mUser := make(map[string]string)
+	getUserBasicInfo(userId, &mUser)
 	t, err := template.ParseFiles("tpls/user_pc.html", "tpls/head.tpl", "tpls/nav.tpl")
 	if err != nil {
 		fmt.Println(err)
@@ -46,7 +46,7 @@ func user(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t.Execute(w, &ubi)
+	t.Execute(w, &mUser)
 }
 
 //Histogram data struct
@@ -176,8 +176,11 @@ type TUsers struct {
 
 func getSession(r *http.Request) string {
 	cookie, err := r.Cookie("session")
-	checkError(err)
-	return cookie.Value
+	if err != nil {
+		return ""
+	} else {
+		return cookie.Value
+	}
 }
 func users(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
@@ -293,9 +296,27 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func runAddNewPort() {
+	for {
+		dbSetup("./redisDB/redis.sock")
+		addNewPort()
+		time.Sleep(time.Second * 30)
+	}
+}
+
+func runUpdateStat() {
+	for {
+		dbSetup("./redisDB/redis.sock")
+		updateStat()
+		time.Sleep(time.Second * 5)
+	}
+}
+
 func main() {
 	dbSetup("./redisDB/redis.sock")
 
+	go runAddNewPort()
+	go runUpdateStat()
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)

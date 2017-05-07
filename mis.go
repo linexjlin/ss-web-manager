@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -9,7 +8,7 @@ import (
 
 func checkError(err error) {
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 }
 
