@@ -3,12 +3,11 @@ package main
 
 import "testing"
 
+func dbSetup() {
+	RedisSetup("./redisDB/redis.sock")
+}
+
 func TestConn(t *testing.T) {
-	rds := RDS{}
-	rds.Connect("./redisDB/redis.sock")
-	ret, err := rds.R.Ping()
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(ret)
+	dbSetup()
+	t.Log(R.Ping().Result())
 }

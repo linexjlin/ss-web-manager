@@ -298,7 +298,6 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 
 func runAddNewPort() {
 	for {
-		dbSetup("./redisDB/redis.sock")
 		addNewPort()
 		time.Sleep(time.Second * 30)
 	}
@@ -306,15 +305,13 @@ func runAddNewPort() {
 
 func runUpdateStat() {
 	for {
-		dbSetup("./redisDB/redis.sock")
 		updateStat()
 		time.Sleep(time.Second * 5)
 	}
 }
 
 func main() {
-	dbSetup("./redisDB/redis.sock")
-
+	RedisSetup("./redisDB/redis.sock")
 	go runAddNewPort()
 	go runUpdateStat()
 	http.HandleFunc("/login", login)

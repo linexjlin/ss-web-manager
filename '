@@ -8,17 +8,16 @@ import (
 	"time"
 )
 
-func getUserId(userName string) (string, error) {
-	return R.Get("user/id/" + userName).Result()
+func getUserId(userName string) string {
+	return R.Get("user/id/" + userName).Val()
 }
 
-func getUserPass(id string) (string, error) {
-	return R.Get("user/password/" + id).Result()
+func getUserPass(id string) string {
+	return R.Get("user/password/" + id)
 }
 
 func checkPassword(userName, password string) (pass bool) {
-	id, err := getUserId(userName)
-	checkError(err)
+	id := getUserId(userName)
 	passwd, err := getUserPass(id)
 	checkError(err)
 	if password == passwd {
@@ -26,6 +25,13 @@ func checkPassword(userName, password string) (pass bool) {
 	} else {
 		return false
 	}
+}
+
+type UserInfo struct {
+	logCnt, email, lastLogin, port, sskey, allUsed string
+	name, ptype                                    string
+	expired                                        time.Time
+	pTrafficAll, pUsed                             int64
 }
 
 type UserServerInfo struct {
@@ -41,7 +47,9 @@ func getUserIds() ([]string, error) {
 }
 
 func parseList(prefix, subfix, ikey string) (vs []string, e error) {
-	vv, err := R.Keys(ikey).Result()
+	fmt.Println("iKey:", ikey)
+	vv, err := R.Keys(ikey)
+	fmt.Println("vv", vv)
 	checkError(err)
 	for _, v := range vv {
 		vs = append(vs, strings.TrimSuffix(strings.TrimPrefix(v, prefix), subfix))
@@ -49,13 +57,13 @@ func parseList(prefix, subfix, ikey string) (vs []string, e error) {
 	return vs, err
 }
 
-func getServerInfo(serverId string) (ip, method, location, traffic, managerPort string, err error) {
-	vals, err := R.MGet("servers/"+serverId+"/ip",
+func getServerInfo(serverId string) (ip, method, location, traffic, managerPort string) {
+	vals := R.MGet("servers/"+serverId+"/ip",
 		"servers/"+serverId+"/method",
 		"servers/"+serverId+"/location",
 		"servers/"+serverId+"/traffic",
-		"servers/"+serverId+"/managerPort").Result()
-	return vals[0].(string), vals[1].(string), vals[2].(string), vals[3].(string), vals[4].(string), err
+		"servers/"+serverId+"/managerPort").Val()
+	return vals[0], vals[1], vals[2], vals[3], vals[4]
 }
 
 func getAdminServerInfo(sf *TServes) error {
@@ -79,11 +87,9 @@ func getAdminServerInfo(sf *TServes) error {
 }
 
 func getUserServerInfo(id string) (ufs []UserServerInfo, err error) {
-	password, e := R.Get("user/ss/password/" + id).Result()
-	checkError(e)
+	password := R.Get("user/ss/password/" + id).Val()
 
-	port, e := R.Get("user/ss/port/" + id).Result()
-	checkError(err)
+	port := R.Get("user/ss/port/" + id).Val()
 
 	ss, e := getServerIds()
 	checkError(err)
@@ -124,7 +130,7 @@ func getMyServerInfo(servers *UserServes, userId string) error {
 }
 
 func getUserBasicInfo(id string, m *map[string]string) error {
-	ret, e := R.MGet(
+	ret, e := rds.R.MGet(
 		"user/name/"+id,
 		"user/package/type/"+id,
 		"user/package/expired/"+id,
@@ -135,22 +141,24 @@ func getUserBasicInfo(id string, m *map[string]string) error {
 		"user/lastlogin/"+id,
 		"user/ss/port/"+id,
 		"user/ss/password/"+id,
-		"user/traffic/used/"+id).Result()
+		"user/traffic/used/"+id)
 	checkError(e)
-	(*m)["Name"] = ret[0].(string)
-	(*m)["Type"] = ret[1].(string)
-	expired, e := unixStr2Time(ret[2].(string))
+	(*m)["Name"] = ret[0]
+	(*m)["Type"] = ret[1]
+	expired, e := unixStr2Time(ret[2])
 	checkError(e)
 	(*m)["DayRemains"] = FloatToString(expired.Sub(time.Now()).Hours()/24, 1) + "天"
-	trafficAll, err := strconv.ParseInt(ret[3].(string), 10, 64)
+
+	trafficAll, err := strconv.ParseInt(ret[3], 10, 64)
 	checkError(err)
 	pTrafficAll := trafficAll
-	trafficUsed, err := strconv.ParseInt(ret[4].(string), 10, 64)
+	trafficUsed, err := strconv.ParseInt(ret[4], 10, 64)
 	checkError(err)
 	pUsed := trafficUsed
 	(*m)["UsedTraffic"] = FloatToString(float64(pUsed)/1024/1024/1024, 3) + "G"
 	(*m)["TrafficRemains"] = FloatToString(float64(pTrafficAll-pUsed)/1024/1024/1024, 3) + "G"
-	return e
+
+	return nil
 }
 
 func getMyUsersInfo(ui *TUsers) error {
@@ -181,67 +189,72 @@ func getMyUsersInfo(ui *TUsers) error {
 			"user/lastlogin/"+id,
 			"user/ss/port/"+id,
 			"user/ss/password/"+id,
-			"user/traffic/used/"+id).Result()
+			"user/traffic/used/"+id).Val()
 		checkError(e)
 		cu := CtlgUsers{}
 		cu.Id = id
-		cu.Name = i[0].(string)
-		cu.Ptype = i[1].(string)
-		cu.Expired = i[2].(string)
-		cu.Pall = i[3].(string)
-		cu.Pused = i[4].(string)
-		cu.LoginCnt = i[5].(string)
-		cu.Email = i[6].(string)
-		cu.LoginCnt = i[7].(string)
-		cu.Port = i[8].(string)
-		cu.SsKey = i[9].(string)
-		cu.Used = i[10].(string)
+		cu.Name = i[0]
+		cu.Ptype = i[1]
+		cu.Expired = i[2]
+		cu.Pall = i[3]
+		cu.Pused = i[4]
+		cu.LoginCnt = i[5]
+		cu.Email = i[6]
+		cu.LoginCnt = i[7]
+		cu.Port = i[8]
+		cu.SsKey = i[9]
+		cu.Used = i[10]
 		ui.Items = append(ui.Items, cu)
 	}
 	return err
 }
 
 func getUserTrafficDetail(id string) (*map[int64]int64, error) {
-	dats, err := R.ZRangeWithScores("user/traffic/hourly/report/"+id, 0, 31*24).Result()
+	dats := c.ZRevRangeWithScores("user/traffic/hourly/report/"+id, 0, 31*24).Val()
 	checkError(err)
 	data := make(map[int64]int64)
-	for _, dat := range dats {
-		var val int64
-		fmt.Sscanf(dat.Member.(string), "%d", &val)
-		data[int64(dat.Score)] = val
+
+	for _,dat:=range dats {
+		key, err := strconv.ParseInt(dats[i*2-1], 10, 64)
+		checkError(err)
+		val, err := strconv.ParseInt(dats[i*2-2], 10, 64)
+		checkError(err)
+		data[key] = val
 	}
 	return &data, nil
 }
 
 func addServer(ip, name, location, managerPort, method string) error {
-	ret, err := R.MSet("servers/list/"+name, "1",
+	ret, err := rds.R.MSet("servers/list/"+name, "1",
 		"servers/"+name+"/ip", ip,
 		"servers/"+name+"/method", method,
 		"servers/"+name+"/location", location,
-		"servers/"+name+"/managerPort", managerPort).Result()
+		"servers/"+name+"/managerPort", managerPort)
 
 	fmt.Println(ret)
 	return err
 }
 
 func addUser(name, password, email string) error {
-	ex1 := (R.Exists("user/id/"+name).Val() == 1)
-	ex2 := (R.Exists("user/id/"+email).Val() == 1)
+	ex1, err := rds.R.Exists("user/id/" + name)
+	checkError(err)
+	ex2, err := rds.R.Exists("user/id/" + email)
+	checkError(err)
 	oldUser := (ex1 || ex2)
 	if oldUser {
 		return errors.New("user Name: " + name + " or email: " + email + " exists!")
 	}
 
-	idInt, err := R.Incr("seq/user/id").Result()
+	idInt, err := rds.R.Incr("seq/user/id")
+	id := strconv.FormatInt(idInt, 10)
 	checkError(err)
-	id := fmt.Sprintf("%d", idInt)
-	portInt, err := R.Incr("seq/user/port").Result()
-	port := fmt.Sprintf("%d", portInt)
+	portInt, err := rds.R.Incr("seq/user/port")
+	port := strconv.FormatInt(portInt, 10)
 
 	checkError(err)
 	sskey := strconv.Itoa(time.Now().Nanosecond())
 
-	ret, err := R.MSet(
+	ret, err := rds.R.MSet(
 		"user/list/"+id, "1",
 		"user/name/"+id, name,
 		"user/password/"+id, password,
@@ -253,23 +266,23 @@ func addUser(name, password, email string) error {
 		"user/package/type/"+id, "monthly",
 		"user/package/traffic/all/"+id, strconv.Itoa(1024*1024*1024),
 		"user/package/expired/"+id, strconv.FormatInt(time.Now().Add(time.Hour*24*31).Unix(), 10),
-		"user/package/traffic/used/"+id, strconv.Itoa(0)).Result()
-	checkError(err)
+		"user/package/traffic/used/"+id, strconv.Itoa(0))
+
 	fmt.Println(ret)
 	return err
 }
 
 func updateSession(session, userId string) {
-	R.Set("session/"+session, userId, time.Second*600)
-	//R.Expire("session/"+session, time.Second*600)
+	rds.R.Set("session/"+session, userId)
+	rds.R.Expire("session/"+session, 600)
 }
 
 func session2userId(session string) (userId string, err error) {
-	return R.Get("session/" + session).Result()
+	return rds.R.Get("session/" + session)
 }
 
 func isAdmin(userId string) bool {
-	admin, err := R.Exists("user/admin/" + userId).Result()
+	admin, err := rds.R.Exists("user/admin/" + userId)
 	checkError(err)
-	return admin == 1
+	return admin
 }
