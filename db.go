@@ -185,17 +185,17 @@ func getMyUsersInfo(ui *TUsers) error {
 		checkError(e)
 		cu := CtlgUsers{}
 		cu.Id = id
-		cu.Name = i[0].(string)
-		cu.Ptype = i[1].(string)
-		cu.Expired = i[2].(string)
-		cu.Pall = i[3].(string)
-		cu.Pused = i[4].(string)
-		cu.LoginCnt = i[5].(string)
-		cu.Email = i[6].(string)
-		cu.LoginCnt = i[7].(string)
-		cu.Port = i[8].(string)
-		cu.SsKey = i[9].(string)
-		cu.Used = i[10].(string)
+		cu.Name = fmt.Sprint(i[0])
+		cu.Ptype = fmt.Sprint(i[1])
+		cu.Expired = fmt.Sprint(i[2])
+		cu.Pall = fmt.Sprint(i[3])
+		cu.Pused = fmt.Sprint(i[4])
+		cu.LoginCnt = fmt.Sprint(i[5])
+		cu.Email = fmt.Sprint(i[6])
+		cu.LoginCnt = fmt.Sprint(i[7])
+		cu.Port = fmt.Sprint(i[8])
+		cu.SsKey = fmt.Sprint(i[9])
+		cu.Used = fmt.Sprint(i[10])
 		ui.Items = append(ui.Items, cu)
 	}
 	return err

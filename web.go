@@ -296,24 +296,7 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func runAddNewPort() {
-	for {
-		addNewPort()
-		time.Sleep(time.Second * 30)
-	}
-}
-
-func runUpdateStat() {
-	for {
-		updateStat()
-		time.Sleep(time.Second * 5)
-	}
-}
-
-func main() {
-	RedisSetup("./redisDB/redis.sock")
-	go runAddNewPort()
-	go runUpdateStat()
+func webMain() {
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)

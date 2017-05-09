@@ -1,3 +1,4 @@
+// Package main
 package main
 
 import (
@@ -7,8 +8,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/linexjlin/ssmmu"
 )
+
+func runAddNewPort() {
+	for {
+		addNewPort()
+		time.Sleep(time.Second * 30)
+	}
+}
+
+func runUpdateStat() {
+	for {
+		updateStat()
+		time.Sleep(time.Second * 5)
+	}
+}
 
 /*
 func ssSetup(server string) (mmu *ssmmu.SSMMU) {
@@ -43,6 +59,7 @@ func addNewPort() {
 		ret, err := R.MGet("servers/"+server+"/ip", "servers/"+server+"/managerPort").Result()
 		checkError(err)
 		serverStr := ret[0].(string) + ":" + ret[1].(string)
+		//fmt.Println("serverStr:", serverStr)
 		mmu := ssmmu.NewSSMMU("udp", serverStr)
 
 		for _, id := range uIds {
@@ -52,7 +69,7 @@ func addNewPort() {
 			filled := (R.Exists(tKey).Val() == 1)
 			checkError(err)
 			if filled || err != nil {
-				fmt.Println(tKey, "exists!")
+				//fmt.Println(tKey, "exists!")
 				continue
 			}
 			fmt.Println("New Port", server, port)
@@ -64,7 +81,10 @@ func addNewPort() {
 			if succ && err == nil {
 				R.Set(tKey, "1", time.Second*0)
 				//rds.R.Expire(tKey, 60)
+			} else {
+				fmt.Println("add port failed")
 			}
+
 		}
 	}
 }
@@ -73,10 +93,7 @@ func updateStat() {
 	servers, err := getServerIds()
 	checkError(err)
 	for _, server := range servers {
-		key := "servers/" + server + "/port/*"
-		fmt.Println("key:", key)
-		openPorts, err := R.Keys(key).Result()
-		fmt.Println("openPorts", openPorts)
+		openPorts, err := R.Keys("servers/" + server + "/port/*").Result()
 		checkError(err)
 
 		stat := make(map[string]int64)
@@ -124,9 +141,42 @@ func updateStat() {
 			}
 			_, err = R.Set("user/ss/port/lasttraffic/"+server+"/"+port, traf, time.Second*0).Result()
 			checkError(err)
-			left, err := R.DecrBy("user/ss/port/left/"+port, traf).Result()
+			left, err := R.DecrBy("user/ss/port/traffic/left/"+port, traf).Result()
 			checkError(err)
 			fmt.Println("port:", port, "left:", left)
+
+			serverLeft, err := R.DecrBy("servers/"+server+"/traffic/left", traf).Result()
+			checkError(err)
+			fmt.Println("server", server, "left:", serverLeft)
+
+			_, err = R.IncrBy("user/ss/port/traffic/all/"+port, traf).Result()
+			checkError(err)
+
+			_, err = R.IncrBy("servers/"+server+"/traffic/"+port, traf).Result()
+			checkError(err)
+
+			_, err = R.IncrBy("servers/"+server+"/traffic/all", traf).Result()
+			checkError(err)
+
+			_, err = R.IncrBy("traffic/all", traf).Result()
+			checkError(err)
+
 		}
+	}
+}
+
+func runGenTrafficLog() {
+	for {
+		for _, pk := range R.Keys("user/ss/port/traffic/all/*").Val() {
+			dat := redis.Z{}
+			dat.Score = float64(time.Now().Unix())
+			traf := R.Get(pk).Val()
+			dat.Member = traf
+			fmt.Println("log traf:", traf)
+
+			port := strings.TrimPrefix(pk, "user/ss/port/traffic/all/")
+			checkError(R.ZAdd("ss/port/traffic/hourly/report/"+port, dat).Err())
+		}
+		time.Sleep(time.Second * 1)
 	}
 }
