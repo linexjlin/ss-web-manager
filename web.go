@@ -75,8 +75,9 @@ func getUserHisto(id string) (h HistoGramData) {
 	checkError(err)
 	hs := HSeries{Name: "流量详细"}
 	for t, io := range *dats {
-		hs.Data = append(hs.Data, round(float64(io)/1024/1024, 3))
-		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).Format("01-02:15"))
+		hs.Data = append(hs.Data, round(float64(io)/1024, 3))
+		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).Format("2006-01-02 15:04"))
+		//		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).String())
 	}
 	h.Data.Series = append(h.Data.Series, hs)
 	return h

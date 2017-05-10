@@ -4,6 +4,8 @@ func main() {
 	RedisSetup("./redisDB/redis.sock")
 	go runAddNewPort()
 	go runUpdateStat()
-	go runGenTrafficLog()
+	go runPortTrafficLog()
+	go runServerTrafficLog()
+	go runAllTrafficLog()
 	webMain()
 }

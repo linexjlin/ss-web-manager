@@ -28,9 +28,10 @@ func checkPassword(userName, password string) (pass bool) {
 	}
 }
 
+/*
 type UserServerInfo struct {
 	ip, location, name, method, port, password string
-}
+}*/
 
 func getServerIds() ([]string, error) {
 	return parseList("servers/list/", "", "servers/list/*")
@@ -49,14 +50,15 @@ func parseList(prefix, subfix, ikey string) (vs []string, e error) {
 	return vs, err
 }
 
+/*
 func getServerInfo(serverId string) (ip, method, location, traffic, managerPort string, err error) {
 	vals, err := R.MGet("servers/"+serverId+"/ip",
 		"servers/"+serverId+"/method",
 		"servers/"+serverId+"/location",
-		"servers/"+serverId+"/traffic",
+		"servers/"+serverId+"/traffic/all",
 		"servers/"+serverId+"/managerPort").Result()
-	return vals[0].(string), vals[1].(string), vals[2].(string), vals[3].(string), vals[4].(string), err
-}
+	return fmt.Sprint(vals[0]), fmt.Sprint(vals[1]), fmt.Sprint(vals[2]), fmt.Sprint(vals[3]), fmt.Sprint(vals[4]), err
+}*/
 
 func getAdminServerInfo(sf *TServes) error {
 	sf.Catalogues.Ip = "IP地址"
@@ -71,13 +73,27 @@ func getAdminServerInfo(sf *TServes) error {
 	for _, sid := range sids {
 		s := CtlgServers{}
 		s.Name = sid
-		s.Ip, s.Method, s.Location, s.Traffic, s.Port, err = getServerInfo(sid)
+
+		vals, err := R.MGet("servers/"+sid+"/ip",
+			"servers/"+sid+"/method",
+			"servers/"+sid+"/location",
+			"servers/"+sid+"/traffic/all",
+			"servers/"+sid+"/managerPort").Result()
 		checkError(err)
+
+		//s.Ip, s.Method, s.Location, s.Traffic, s.Port, err = getServerInfo(sid)
+		s.Ip = fmt.Sprint(vals[0])
+		s.Method = fmt.Sprint(vals[1])
+		s.Location = fmt.Sprint(vals[2])
+		s.Traffic = fmt.Sprint(vals[3])
+		s.Port = fmt.Sprint(vals[4])
+
 		sf.Items = append(sf.Items, s)
 	}
 	return err
 }
 
+/*
 func getUserServerInfo(id string) (ufs []UserServerInfo, err error) {
 	password, e := R.Get("user/ss/password/" + id).Result()
 	checkError(e)
@@ -97,6 +113,7 @@ func getUserServerInfo(id string) (ufs []UserServerInfo, err error) {
 	}
 	return ufs, nil
 }
+*/
 
 func getMyServerInfo(servers *UserServes, userId string) error {
 	servers.Catalogues.Ip = "IP地址"
@@ -107,29 +124,48 @@ func getMyServerInfo(servers *UserServes, userId string) error {
 	servers.Catalogues.Port = "端口"
 	servers.Catalogues.Qrcode = "二维码"
 	servers.Catalogues.Status = "状态"
-
-	ufs, err := getUserServerInfo(userId)
+	//todo xxx
+	password, err := R.Get("user/ss/password/" + userId).Result()
 	checkError(err)
 
-	for _, uf := range ufs {
+	port, err := R.Get("user/ss/port/" + userId).Result()
+	checkError(err)
+
+	ss, err := getServerIds()
+	checkError(err)
+
+	for _, s := range ss {
+
+		vals, err := R.MGet("servers/"+s+"/ip",
+			"servers/"+s+"/method",
+			"servers/"+s+"/location").Result()
+		checkError(err)
+
 		server := Ctlg{}
-		server.Ip = uf.ip
-		server.Key = uf.password
-		server.Location = uf.location
-		server.Method = uf.method
-		server.Name = uf.name
+		server.Ip = fmt.Sprint(vals[0])
+		server.Method = fmt.Sprint(vals[1])
+		server.Location = fmt.Sprint(vals[2])
+		server.Name = s
+		server.Port = port
+		server.Key = password
+		server.Port = port
+		server.Qrcode = "/myqrcode"
+		server.Status = "active"
+
 		servers.Items = append(servers.Items, server)
 	}
 	return nil
 }
 
 func getUserBasicInfo(id string, m *map[string]string) error {
+	port, err := R.Get("user/ss/port/" + id).Result()
+	checkError(err)
 	ret, e := R.MGet(
 		"user/name/"+id,
 		"user/package/type/"+id,
 		"user/package/expired/"+id,
 		"user/package/traffic/all/"+id,
-		"user/package/traffic/used/"+id,
+		"user/ss/port/traffic/left/"+port,
 		"user/login/cnt/"+id,
 		"user/email/"+id,
 		"user/lastlogin/"+id,
@@ -142,14 +178,17 @@ func getUserBasicInfo(id string, m *map[string]string) error {
 	expired, e := unixStr2Time(ret[2].(string))
 	checkError(e)
 	(*m)["DayRemains"] = FloatToString(expired.Sub(time.Now()).Hours()/24, 1) + "天"
+
 	trafficAll, err := strconv.ParseInt(ret[3].(string), 10, 64)
 	checkError(err)
 	pTrafficAll := trafficAll
-	trafficUsed, err := strconv.ParseInt(ret[4].(string), 10, 64)
+
+	trafficRemain, err := strconv.ParseInt(ret[4].(string), 10, 64)
 	checkError(err)
-	pUsed := trafficUsed
-	(*m)["UsedTraffic"] = FloatToString(float64(pUsed)/1024/1024/1024, 3) + "G"
-	(*m)["TrafficRemains"] = FloatToString(float64(pTrafficAll-pUsed)/1024/1024/1024, 3) + "G"
+	pRemain := trafficRemain
+
+	(*m)["UsedTraffic"] = FloatToString(float64(pTrafficAll-pRemain)/1024/1024/1024, 3) + "G"
+	(*m)["TrafficRemains"] = FloatToString(float64(trafficRemain)/1024/1024/1024, 3) + "G"
 	return e
 }
 
@@ -175,7 +214,6 @@ func getMyUsersInfo(ui *TUsers) error {
 			"user/package/type/"+id,
 			"user/package/expired/"+id,
 			"user/package/traffic/all/"+id,
-			"user/package/traffic/used/"+id,
 			"user/login/cnt/"+id,
 			"user/email/"+id,
 			"user/lastlogin/"+id,
@@ -187,22 +225,36 @@ func getMyUsersInfo(ui *TUsers) error {
 		cu.Id = id
 		cu.Name = fmt.Sprint(i[0])
 		cu.Ptype = fmt.Sprint(i[1])
-		cu.Expired = fmt.Sprint(i[2])
+		cu.Expired = unixStr2Str(fmt.Sprint(i[2]))
 		cu.Pall = fmt.Sprint(i[3])
-		cu.Pused = fmt.Sprint(i[4])
-		cu.LoginCnt = fmt.Sprint(i[5])
-		cu.Email = fmt.Sprint(i[6])
-		cu.LoginCnt = fmt.Sprint(i[7])
-		cu.Port = fmt.Sprint(i[8])
-		cu.SsKey = fmt.Sprint(i[9])
-		cu.Used = fmt.Sprint(i[10])
+		cu.LoginCnt = fmt.Sprint(i[4])
+		cu.Email = fmt.Sprint(i[5])
+		cu.LastLogin = unixStr2Str(fmt.Sprint(i[6]))
+		cu.Port = fmt.Sprint(i[7])
+		cu.SsKey = fmt.Sprint(i[8])
+
+		port := cu.Port
+		vals, err := R.MGet(
+			"user/ss/port/traffic/all/"+port,
+			"user/ss/port/traffic/left/"+port).Result()
+		checkError(err)
+		pall := Str2Int64(cu.Pall)
+		used := Str2Int64(fmt.Sprint(vals[0]))
+		pleft := Str2Int64(fmt.Sprint(vals[1]))
+		pused := pall - pleft
+		cu.Pall = FloatToString(float64(pall/1024/1024), 1) + " MB"
+		cu.Used = FloatToString(float64(used/1024/1024), 1) + "MB"
+		cu.Pused = FloatToString(float64(pused/1024/1024), 1) + "MB"
+
 		ui.Items = append(ui.Items, cu)
 	}
 	return err
 }
 
 func getUserTrafficDetail(id string) (*map[int64]int64, error) {
-	dats, err := R.ZRangeWithScores("user/traffic/hourly/report/"+id, 0, 31*24).Result()
+	port, err := R.Get("user/ss/port/" + id).Result()
+	checkError(err)
+	dats, err := R.ZRangeWithScores("ss/port/traffic/hourly/report/"+port, 0, 31*24).Result()
 	checkError(err)
 	data := make(map[int64]int64)
 	for _, dat := range dats {

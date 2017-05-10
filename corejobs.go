@@ -60,6 +60,7 @@ func addNewPort() {
 		checkError(err)
 		serverStr := ret[0].(string) + ":" + ret[1].(string)
 		//fmt.Println("serverStr:", serverStr)
+		//mmu := ssmmu.NewSSMMU("udp", serverStr)
 		mmu := ssmmu.NewSSMMU("udp", serverStr)
 
 		for _, id := range uIds {
@@ -101,7 +102,7 @@ func updateStat() {
 		checkError(err)
 		serverStr := ret[0].(string) + ":" + ret[1].(string)
 		mmu := ssmmu.NewSSMMU("udp", serverStr)
-		rsp, err := mmu.Stat(time.Second * 0)
+		rsp, err := mmu.Stat(time.Second * 15)
 		if len(rsp) > 6 {
 			data := rsp[6:]
 			checkError(json.Unmarshal(data, &stat))
@@ -165,18 +166,47 @@ func updateStat() {
 	}
 }
 
-func runGenTrafficLog() {
+func runPortTrafficLog() {
 	for {
 		for _, pk := range R.Keys("user/ss/port/traffic/all/*").Val() {
 			dat := redis.Z{}
 			dat.Score = float64(time.Now().Unix())
 			traf := R.Get(pk).Val()
 			dat.Member = traf
-			fmt.Println("log traf:", traf)
+			fmt.Println("log traf port:", traf)
 
 			port := strings.TrimPrefix(pk, "user/ss/port/traffic/all/")
 			checkError(R.ZAdd("ss/port/traffic/hourly/report/"+port, dat).Err())
 		}
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func runServerTrafficLog() {
+	for {
+		for _, sk := range R.Keys("servers/list/*").Val() {
+			server := strings.TrimPrefix(sk, "servers/list/")
+			dat := redis.Z{}
+			dat.Score = float64(time.Now().Unix())
+			traf := R.Get("servers/" + server + "/traffic/all").Val()
+			dat.Member = traf
+			fmt.Println("log traf server:", traf)
+
+			checkError(R.ZAdd("servers/"+server+"/traffic/hourly/report/", dat).Err())
+		}
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func runAllTrafficLog() {
+	for {
+		dat := redis.Z{}
+		dat.Score = float64(time.Now().Unix())
+		traf := R.Get("traffic/all").Val()
+		dat.Member = traf
+		fmt.Println("log traf all:", traf)
+
+		checkError(R.ZAdd("traffic/hourly/report", dat).Err())
+		time.Sleep(time.Second * 5)
 	}
 }
