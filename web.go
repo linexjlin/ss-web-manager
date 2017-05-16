@@ -71,7 +71,7 @@ func getUserHisto(id string) (h HistoGramData) {
 	h.Code = 0
 	h.Result = true
 	h.Message = "success"
-	dats, err := getUserTrafficDetail("101")
+	dats, err := getUserTrafficDetail(id)
 	checkError(err)
 	hs := HSeries{Name: "流量详细"}
 	for t, io := range *dats {
@@ -112,10 +112,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 			id, err := getUserId(name)
 			checkError(err)
 			session := fmt.Sprintf("%d%d", time.Now().UnixNano(), time.Now().Unix())
-			fmt.Println(session)
 			expiration := time.Now().Add(30 * 24 * time.Hour)
 			cookie := http.Cookie{Name: "session", Value: session, Expires: expiration}
 			updateSession(session, id)
+			incLoginCnt(id)
 			http.SetCookie(w, &cookie)
 			http.Redirect(w, r, "/user", 302)
 		} else {
@@ -237,13 +237,17 @@ func servers(w http.ResponseWriter, r *http.Request) {
 
 func newUser(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
-	if err != nil {
-		http.Redirect(w, r, "/login", 301)
-		return
-	}
-	if !isAdmin(userId) {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+	nWorld := newWorld()
+	needAdmin := nWorld
+	if !nWorld {
+		if err != nil {
+			http.Redirect(w, r, "/login", 301)
+			return
+		}
+		if !isAdmin(userId) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 	}
 
 	if r.Method == "GET" {
@@ -260,7 +264,7 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 		if name == "" || password == "" || email == "" {
 			http.NotFound(w, r)
 		}
-		err := addUser(name, password, email)
+		err := addUser(name, password, email, needAdmin)
 		checkError(err)
 	}
 }

@@ -18,14 +18,14 @@ func getUserPass(id string) (string, error) {
 
 func checkPassword(userName, password string) (pass bool) {
 	id, err := getUserId(userName)
-	checkError(err)
-	passwd, err := getUserPass(id)
-	checkError(err)
-	if password == passwd {
-		return true
-	} else {
+	if err != nil {
 		return false
 	}
+	passwd, err := getUserPass(id)
+	if err != nil {
+		return false
+	}
+	return password == passwd
 }
 
 /*
@@ -276,7 +276,10 @@ func addServer(ip, name, location, managerPort, method string) error {
 	return err
 }
 
-func addUser(name, password, email string) error {
+func addUser(name, password, email string, admin bool) error {
+	if len(name) < 3 {
+		return errors.New("user Name: " + name + " too short!")
+	}
 	ex1 := (R.Exists("user/id/"+name).Val() == 1)
 	ex2 := (R.Exists("user/id/"+email).Val() == 1)
 	oldUser := (ex1 || ex2)
@@ -288,6 +291,7 @@ func addUser(name, password, email string) error {
 	checkError(err)
 	id := fmt.Sprintf("%d", idInt)
 	portInt, err := R.Incr("seq/user/port").Result()
+	portInt = portInt + 50000
 	port := fmt.Sprintf("%d", portInt)
 
 	checkError(err)
@@ -297,27 +301,43 @@ func addUser(name, password, email string) error {
 		"user/list/"+id, "1",
 		"user/name/"+id, name,
 		"user/password/"+id, password,
-		"user/email"+id, email,
+		"user/email/"+id, email,
 		"user/id/"+name, id,
 		"user/id/"+email, id,
 		"user/ss/password/"+id, sskey,
 		"user/ss/port/"+id, port,
 		"user/package/type/"+id, "monthly",
-		"user/package/traffic/all/"+id, strconv.Itoa(1024*1024*1024),
+		"user/package/traffic/all/"+id, fmt.Sprintf("%d", 1024*1024*1024),
 		"user/package/expired/"+id, strconv.FormatInt(time.Now().Add(time.Hour*24*31).Unix(), 10),
-		"user/package/traffic/used/"+id, strconv.Itoa(0)).Result()
+		"user/ss/port/traffic/left/"+port, fmt.Sprintf("%d", 1024*1024*1024)).Result()
 	checkError(err)
 	fmt.Println(ret)
+	if admin {
+		_, err := R.Set("user/admin/"+id, "1", time.Second*0).Result()
+		checkError(err)
+	}
 	return err
 }
 
 func updateSession(session, userId string) {
 	R.Set("session/"+session, userId, time.Second*600)
-	//R.Expire("session/"+session, time.Second*600)
+}
+
+func incLoginCnt(id string) {
+	R.Incr("user/login/cnt/" + id)
 }
 
 func session2userId(session string) (userId string, err error) {
 	return R.Get("session/" + session).Result()
+}
+
+func newWorld() bool {
+	_, err := R.Get("seq/user/id").Result()
+	if err != nil {
+		return true
+	} else {
+		return false
+	}
 }
 
 func isAdmin(userId string) bool {
