@@ -1,6 +1,6 @@
 # Multi user Manager for [shadowsocks](https://github.com/shadowsocks/shadowsocks-libev)
 ## How to Use
-### BUild
+### Build
 ```
 git clone https://github.com/linexjlin/ss-web-manager.git
 cd ss-web-manager
