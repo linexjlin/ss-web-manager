@@ -28,11 +28,6 @@ func checkPassword(userName, password string) (pass bool) {
 	return password == passwd
 }
 
-/*
-type UserServerInfo struct {
-	ip, location, name, method, port, password string
-}*/
-
 func getServerIds() ([]string, error) {
 	return parseList("servers/list/", "", "servers/list/*")
 }
@@ -49,16 +44,6 @@ func parseList(prefix, subfix, ikey string) (vs []string, e error) {
 	}
 	return vs, err
 }
-
-/*
-func getServerInfo(serverId string) (ip, method, location, traffic, managerPort string, err error) {
-	vals, err := R.MGet("servers/"+serverId+"/ip",
-		"servers/"+serverId+"/method",
-		"servers/"+serverId+"/location",
-		"servers/"+serverId+"/traffic/all",
-		"servers/"+serverId+"/managerPort").Result()
-	return fmt.Sprint(vals[0]), fmt.Sprint(vals[1]), fmt.Sprint(vals[2]), fmt.Sprint(vals[3]), fmt.Sprint(vals[4]), err
-}*/
 
 func getAdminServerInfo(sf *TServes) error {
 	sf.Catalogues.Ip = "IP地址"
@@ -92,28 +77,6 @@ func getAdminServerInfo(sf *TServes) error {
 	}
 	return err
 }
-
-/*
-func getUserServerInfo(id string) (ufs []UserServerInfo, err error) {
-	password, e := R.Get("user/ss/password/" + id).Result()
-	checkError(e)
-
-	port, e := R.Get("user/ss/port/" + id).Result()
-	checkError(err)
-
-	ss, e := getServerIds()
-	checkError(err)
-	for _, s := range ss {
-		uf := UserServerInfo{}
-		uf.ip, uf.method, uf.location, _, _, e = getServerInfo(s)
-		uf.password = password
-		uf.port = port
-		uf.name = s
-		ufs = append(ufs, uf)
-	}
-	return ufs, nil
-}
-*/
 
 func getMyServerInfo(servers *UserServes, userId string) error {
 	servers.Catalogues.Ip = "IP地址"

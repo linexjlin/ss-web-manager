@@ -26,29 +26,6 @@ func runUpdateStat() {
 	}
 }
 
-/*
-func ssSetup(server string) (mmu *ssmmu.SSMMU) {
-	mmu = ssmmu.NewSSMMU("udp", server)
-	return
-}
-
-func ssAdd(port int, passwd string, server string) (succ bool, err error) {
-	mmu := setup(server)
-	return mmu.Add(port, passwd)
-}
-
-func ssRemove(port int, server string) (succ bool, err error) {
-	mmu := setup(server)
-	return mmu.Remove(port)
-}
-
-func ssStat(server string) (statData []byte, err error) {
-	mmu := setup(server)
-	rsp, err := mmu.Stat(time.Second * 15)
-	checkError(err)
-	return rsp, nil
-}*/
-
 func addNewPort() {
 	servers, err := getServerIds()
 	checkError(err)
