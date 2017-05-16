@@ -31,17 +31,22 @@ type UserServes struct {
 }
 
 func user(w http.ResponseWriter, r *http.Request) {
-	ubi := UserBasicInfo{}
-	getUserBasicInfo("101", &ubi)
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 301)
+		return
+	}
+
+	mUser := make(map[string]string)
+	getUserBasicInfo(userId, &mUser)
 	t, err := template.ParseFiles("tpls/user_pc.html", "tpls/head.tpl", "tpls/nav.tpl")
-	//t, err := template.ParseFiles("tpls/user.html")
 	if err != nil {
 		fmt.Println(err)
 		http.NotFound(w, r)
 		return
 	}
 
-	t.Execute(w, &ubi)
+	t.Execute(w, &mUser)
 }
 
 //Histogram data struct
@@ -66,53 +71,88 @@ func getUserHisto(id string) (h HistoGramData) {
 	h.Code = 0
 	h.Result = true
 	h.Message = "success"
-	dats, err := getUserTrafficDetail("101")
+	dats, err := getUserTrafficDetail(id)
 	checkError(err)
 	hs := HSeries{Name: "流量详细"}
 	for t, io := range *dats {
-		hs.Data = append(hs.Data, round(float64(io)/1024/1024, 3))
-		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).Format("01-02:15"))
+		hs.Data = append(hs.Data, round(float64(io)/1024, 3))
+		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).Format("2006-01-02 15:04"))
+		//		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).String())
 	}
 	h.Data.Series = append(h.Data.Series, hs)
 	return h
 }
 
 func UserTrafficDetail(w http.ResponseWriter, r *http.Request) {
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	userId := session2userId("session")
 	h := getUserHisto(userId)
 	data, err := json.Marshal(&h)
 	checkError(err)
 	w.Write(data)
 }
 
-func session2userId(session string) (userId string) {
-	return "101"
-}
-
 func login(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
-	checkError(err)
-	t.Execute(w, nil)
+	if r.Method == "GET" {
+		t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
+		checkError(err)
+		t.Execute(w, nil)
+	}
+	if r.Method == "POST" {
+		r.ParseForm()
+		name := r.FormValue("name")
+		password := r.FormValue("password")
+		if checkPassword(name, password) {
+			id, err := getUserId(name)
+			checkError(err)
+			session := fmt.Sprintf("%d%d", time.Now().UnixNano(), time.Now().Unix())
+			expiration := time.Now().Add(30 * 24 * time.Hour)
+			cookie := http.Cookie{Name: "session", Value: session, Expires: expiration}
+			updateSession(session, id)
+			incLoginCnt(id)
+			http.SetCookie(w, &cookie)
+			http.Redirect(w, r, "/user", 302)
+		} else {
+			t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
+			checkError(err)
+			t.Execute(w, nil)
+		}
+	}
 }
 
 func myservers(w http.ResponseWriter, r *http.Request) {
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	userId := session2userId("session")
 	servers := UserServes{Catalogues: Ctlg{}}
-	err := getMyServerInfo(&servers, userId)
-	checkError(err)
+	checkError(getMyServerInfo(&servers, userId))
 	serverData, err := json.Marshal(&servers)
 	checkError(err)
 	w.Write(serverData)
 }
 
 func admin(w http.ResponseWriter, r *http.Request) {
+	userId, err := session2userId(getSession(r))
+	if !isAdmin(userId) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	t, err := template.ParseFiles("tpls/user_admin.html", "tpls/head.tpl", "tpls/nav.tpl")
 	checkError(err)
 	t.Execute(w, nil)
+
 }
 
 type CtlgUsers struct {
@@ -135,15 +175,29 @@ type TUsers struct {
 	Items      []CtlgUsers `json:"items"`
 }
 
+func getSession(r *http.Request) string {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		return ""
+	} else {
+		return cookie.Value
+	}
+}
 func users(w http.ResponseWriter, r *http.Request) {
+	userId, err := session2userId(getSession(r))
+	if !isAdmin(userId) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	//userId := session2userId("session")
 	us := TUsers{}
 	getMyUsersInfo(&us)
 	jdata, err := json.Marshal(&us)
 	checkError(err)
 	w.Write(jdata)
+
 }
 
 type CtlgServers struct {
@@ -162,9 +216,18 @@ type TServes struct {
 }
 
 func servers(w http.ResponseWriter, r *http.Request) {
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 301)
+		return
+	}
+	if !isAdmin(userId) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	//userId := session2userId("session")
 	sf := TServes{}
 	getAdminServerInfo(&sf)
 	jdata, err := json.Marshal(&sf)
@@ -173,9 +236,22 @@ func servers(w http.ResponseWriter, r *http.Request) {
 }
 
 func newUser(w http.ResponseWriter, r *http.Request) {
+	userId, err := session2userId(getSession(r))
+	nWorld := newWorld()
+	needAdmin := nWorld
+	if !nWorld {
+		if err != nil {
+			http.Redirect(w, r, "/login", 301)
+			return
+		}
+		if !isAdmin(userId) {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	}
 
 	if r.Method == "GET" {
-		t, err := template.ParseFiles("tpls/new_user.html")
+		t, err := template.ParseFiles("tpls/new_user.html", "tpls/head.tpl")
 		checkError(err)
 		t.Execute(w, nil)
 	}
@@ -188,14 +264,24 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 		if name == "" || password == "" || email == "" {
 			http.NotFound(w, r)
 		}
-		err := addUser(name, password, email)
+		err := addUser(name, password, email, needAdmin)
 		checkError(err)
 	}
 }
 
 func newServer(w http.ResponseWriter, r *http.Request) {
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 301)
+		return
+	}
+	if !isAdmin(userId) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	if r.Method == "GET" {
-		t, err := template.ParseFiles("tpls/new_server.html")
+		t, err := template.ParseFiles("tpls/new_server.html", "tpls/head.tpl")
 		checkError(err)
 		t.Execute(w, nil)
 	}
@@ -207,18 +293,15 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 		location := r.FormValue("location")
 		managerPort := r.FormValue("port")
 		method := r.FormValue("method")
-		//fmt.Println(ip, name, location, managerPort, managerPort, method)
 		if ip == "" || managerPort == "" || method == "" {
 			http.NotFound(w, r)
 		}
 		err := addServer(ip, name, location, managerPort, method)
 		checkError(err)
 	}
-
 }
 
-func main() {
-	dbSetup("./redisDB/redis.sock")
+func webMain() {
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)
