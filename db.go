@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
@@ -112,7 +113,7 @@ func getMyServerInfo(servers *UserServes, userId string) error {
 		server.Port = port
 		server.Key = password
 		server.Port = port
-		server.Qrcode = "/myqrcode"
+		server.Qrcode = "/qrCode?server=" + s
 		server.Status = "active"
 
 		servers.Items = append(servers.Items, server)
@@ -307,4 +308,17 @@ func isAdmin(userId string) bool {
 	admin, err := R.Exists("user/admin/" + userId).Result()
 	checkError(err)
 	return admin == 1
+}
+
+func getSSStr(server, userId string) string {
+	dats, err := R.MGet(
+		"servers/"+server+"/ip",
+		"servers/"+server+"/method",
+		"user/ss/password/"+userId,
+		"user/ss/port/"+userId).Result()
+	checkError(err)
+	methodPass := base64.StdEncoding.EncodeToString([]byte(dats[1].(string) + ":" + dats[2].(string)))
+	ssstr := "ss://" + methodPass + "@" + dats[0].(string) + ":" + dats[3].(string) + "#" + server
+	fmt.Println(ssstr)
+	return ssstr
 }

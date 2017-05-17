@@ -43,17 +43,29 @@ func addNewPort() {
 		for _, id := range uIds {
 			port, err := R.Get("user/ss/port/" + id).Result()
 			checkError(err)
-			tKey := "servers/" + server + "/port/" + port
-			filled := (R.Exists(tKey).Val() == 1)
+			intPort, err := strconv.Atoi(port)
 			checkError(err)
-			if filled || err != nil {
+
+			tKey := "servers/" + server + "/port/" + port
+			filled := (R.Exists("servers/"+server+"/port/"+port).Val() == 1)
+			checkError(err)
+
+			//remove port
+			needRemove := (R.Exists("ss/"+"/port/suspend/"+port).Val() == 1)
+			if needRemove {
+				if filled {
+					mmu.Remove(intPort)
+				}
+				continue
+			}
+
+			//add port
+			if filled {
 				//fmt.Println(tKey, "exists!")
 				continue
 			}
 			fmt.Println("New Port", server, port)
 			password, err := R.Get("user/ss/password/" + id).Result()
-			checkError(err)
-			intPort, err := strconv.Atoi(port)
 			checkError(err)
 			succ, err := mmu.Add(intPort, password)
 			if succ && err == nil {
@@ -121,10 +133,17 @@ func updateStat() {
 			checkError(err)
 			left, err := R.DecrBy("user/ss/port/traffic/left/"+port, traf).Result()
 			checkError(err)
+			if left < 0 {
+				R.Set("ss/"+"/port/suspend/"+port, "1", time.Second*0)
+			}
 			fmt.Println("port:", port, "left:", left)
 
 			serverLeft, err := R.DecrBy("servers/"+server+"/traffic/left", traf).Result()
 			checkError(err)
+			if serverLeft < 0 {
+				R.Set("servers/"+"/suspend/"+server, "1", time.Second*0)
+			}
+
 			fmt.Println("server", server, "left:", serverLeft)
 
 			_, err = R.IncrBy("user/ss/port/traffic/all/"+port, traf).Result()

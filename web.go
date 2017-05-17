@@ -6,6 +6,8 @@ import (
 	"html/template"
 	"net/http"
 	"time"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 type UserBasicInfo struct {
@@ -33,7 +35,7 @@ type UserServes struct {
 func user(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
-		http.Redirect(w, r, "/login", 301)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 
@@ -218,7 +220,7 @@ type TServes struct {
 func servers(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
-		http.Redirect(w, r, "/login", 301)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 	if !isAdmin(userId) {
@@ -241,7 +243,7 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 	needAdmin := nWorld
 	if !nWorld {
 		if err != nil {
-			http.Redirect(w, r, "/login", 301)
+			http.Redirect(w, r, "/login", 302)
 			return
 		}
 		if !isAdmin(userId) {
@@ -272,7 +274,7 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 func newServer(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
-		http.Redirect(w, r, "/login", 301)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 	if !isAdmin(userId) {
@@ -301,11 +303,30 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func genQRcode(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 302)
+		return
+	}
+	server := r.FormValue("server")
+	if server == "" {
+		http.NotFound(w, r)
+		return
+	}
+	ssstr := getSSStr(server, userId)
+
+	png, _ := qrcode.Encode(ssstr, qrcode.Medium, 256)
+	w.Write(png)
+}
+
 func webMain() {
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)
 	http.HandleFunc("/new_user", newUser)
+	http.HandleFunc("/qrCode", genQRcode)
 	http.HandleFunc("/new_server", newServer)
 	http.HandleFunc("/api/myservers.json", myservers)
 	http.HandleFunc("/api/mytraffic.json", UserTrafficDetail)
