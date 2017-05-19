@@ -252,16 +252,17 @@ func addUser(name, password, email string, admin bool) error {
 	}
 
 	idInt, err := R.Incr("seq/user/id").Result()
+	idInt = idInt + int64(gconf.UserIdStartWith)
 	checkError(err)
 	id := fmt.Sprintf("%d", idInt)
 	portInt, err := R.Incr("seq/user/port").Result()
-	portInt = portInt + 50000
+	portInt = portInt + int64(gconf.SSPortStartWith)
 	port := fmt.Sprintf("%d", portInt)
 
 	checkError(err)
 	sskey := strconv.Itoa(time.Now().Nanosecond())
 
-	ret, err := R.MSet(
+	_, err = R.MSet(
 		"user/list/"+id, "1",
 		"user/name/"+id, name,
 		"user/password/"+id, password,
@@ -270,16 +271,24 @@ func addUser(name, password, email string, admin bool) error {
 		"user/id/"+email, id,
 		"user/ss/password/"+id, sskey,
 		"user/ss/port/"+id, port,
-		"user/package/type/"+id, "monthly",
-		"user/package/traffic/all/"+id, fmt.Sprintf("%d", 1024*1024*1024),
-		"user/package/expired/"+id, strconv.FormatInt(time.Now().Add(time.Hour*24*31).Unix(), 10),
-		"user/ss/port/traffic/left/"+port, fmt.Sprintf("%d", 1024*1024*1024)).Result()
+		"user/package/type/"+id, fmt.Sprint(gconf.DefaultCycle),
+		"user/package/traffic/all/"+id, fmt.Sprintf("%d", gconf.DefaultTraffic),
+		"user/package/expired/"+id, strconv.FormatInt(time.Now().Add(time.Hour*24*time.Duration(gconf.DefaultCycle)).Unix(), 10),
+		"user/ss/port/traffic/left/"+port, fmt.Sprintf("%d", gconf.DefaultTraffic)).Result()
 	checkError(err)
-	fmt.Println(ret)
+
+	//send verify email
+	verifyKey := fmt.Sprintf("%d", time.Now().UnixNano())
+	if sendVerifyMail(name, email, verifyKey) {
+		err = R.Set("email/verify/"+verifyKey, email, time.Hour*24*90).Err()
+		checkError(err)
+	}
+
 	if admin {
 		_, err := R.Set("user/admin/"+id, "1", time.Second*0).Result()
 		checkError(err)
 	}
+
 	return err
 }
 
@@ -321,4 +330,18 @@ func getSSStr(server, userId string) string {
 	ssstr := "ss://" + methodPass + "@" + dats[0].(string) + ":" + dats[3].(string) + "#" + server
 	fmt.Println(ssstr)
 	return ssstr
+}
+
+func verifyMailAddr(k string) string {
+	email, err := R.Get("email/verify/" + k).Result()
+	if err != nil {
+		return fmt.Sprintln("No key:", k, "found!")
+	}
+	R.Del("email/verify/" + k)
+	if R.Exists("email/verified/"+email).Val() == 1 {
+		return fmt.Sprintln("Email", "verified")
+	}
+	err = R.Set("email/verified/"+email, fmt.Sprint(time.Now().Unix()), time.Second*0).Err()
+	checkError(err)
+	return "Congratulation Your Email Verified!"
 }

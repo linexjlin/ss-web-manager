@@ -10,9 +10,10 @@ go build
 ### Prepare redis DB and run redis
 
 ```
+cp config.json.example config.json
 cp -r redisDB.example redisDB 
 cd redisDB
-nohup redis-server redis.conf
+nohup redis-server redis.conf &
 ```
 
 ### Run

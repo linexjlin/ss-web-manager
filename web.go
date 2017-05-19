@@ -128,6 +128,22 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func signup(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		t, err := template.ParseFiles("tpls/signup.html", "tpls/head.tpl", "tpls/nav.tpl")
+		checkError(err)
+		t.Execute(w, nil)
+	}
+	if r.Method == "POST" {
+		r.ParseForm()
+		name := r.FormValue("name")
+		email := r.FormValue("email")
+		password := r.FormValue("password")
+		addUser(name, password, email, false)
+		w.Write([]byte("Singup Success"))
+	}
+}
+
 func myservers(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
@@ -321,7 +337,20 @@ func genQRcode(w http.ResponseWriter, r *http.Request) {
 	w.Write(png)
 }
 
+func mailAddrVerify(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	k := r.FormValue("k")
+	if k == "" {
+		http.NotFound(w, r)
+		return
+	}
+	msg := verifyMailAddr(k)
+	w.Write([]byte(msg))
+}
+
 func webMain() {
+	http.HandleFunc("/signup", signup)
+	http.HandleFunc("/verifyKey", mailAddrVerify)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)

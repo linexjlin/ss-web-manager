@@ -7,9 +7,9 @@
                                 <img src="https://o.qcloud.com/static_api/v3/bk/images/logo.png" class="logo"> </a>
                         </div>
                         <ul class="nav navbar-nav pull-left m0">
-                            <li class="active"><a href="javascript:void(0);">首页</a></li>
-                            <li><a href="javascript:void(0);">关于</a></li>
-                            <li><a href="javascript:void(0);">联系我们</a></li>
+                            <li class="inactive"><a href="/login">登录</a></li>
+                            <li class="inactive"><a href="/signup">注册</a></li>
+                            <li class="inactive"><a href="/us">联系我们</a></li>
                         </ul>
                         <div class="navbar-header pull-right">
                             <ul class="nav">
