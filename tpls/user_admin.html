@@ -32,7 +32,7 @@
                     </table>
                     <template id="header_tpl_users">
                         <tr>
-                            <th style="width: 70px;">#id#</th>
+                            <th style="width: 70px;">#id#<a href="/new_user"><i class="fa fa-plus"><i/></a></th>
                             <th style="width: 5%;">#name#</th>
                             <th style="width: 5%;">#ptype#</th>
                             <th style="width: 12%;">#expired#</th>
@@ -62,9 +62,9 @@
                             <td style="widtd: 5%;">#sskey#</td>
                             <td style="widtd: 5%;">#used#</td>
                             <td>
-                                <button class="btn btn-xs btn-success"> <i class="glyphicon glyphicon-ok"></i> </button>
-                                <button class="btn btn-xs btn-warning"> <i class="glyphicon glyphicon-edit"></i> </button>
-                                <button class="btn btn-xs btn-danger"> <i class="glyphicon glyphicon-remove"></i> </button>
+				<a href="user/ss/active?id=#id#"><button class="btn btn-xs btn-success" title="激活"> <i class="glyphicon glyphicon-ok"></i></button></a>
+				<a href="user/ss/edit?id=#id#"><button class="btn btn-xs btn-warning" title="修改"> <i class="glyphicon glyphicon-edit"></i></button></a>
+				<a href="user/ss/remove?id=#id#"><button class="btn btn-xs btn-danger" title="删除"> <i class="glyphicon glyphicon-remove"></i></button></a>
                             </td>
                         </tr>
                     </template>
@@ -76,9 +76,10 @@
                     <ul class="king-block-options">
                         <li>
                             <!-- <button type="button"><i class="fa fa-cog"></i></button> -->
+
                         </li>
                     </ul>
-                    <h3 class="king-block-title">服务器列表</h3>
+		    <h3 class="king-block-title">服务器列表 </h3>
                 </div>
                 <div class="king-block-content">
                     <table class="table mb0 pr15 ranger-box3  ">
@@ -98,7 +99,7 @@
                     </table>
                     <template id="header_tpl_servers">
                         <tr>
-			    <th style="width: 70px;">#name#</th>
+				<th style="width: 70px;">#name# <a href="/new_server"><i class="fa fa-plus"><i/></a></th>
                             <th style="width: 5%;">#location#</th>
                             <th style="width: 5%;">#ip#</th>
                             <th style="width: 8%;">#port#</th>

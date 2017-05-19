@@ -114,7 +114,7 @@ func getMyServerInfo(servers *UserServes, userId string) error {
 		server.Key = password
 		server.Port = port
 		server.Qrcode = "/qrCode?server=" + s
-		server.Status = "active"
+		server.Status = "happy"
 
 		servers.Items = append(servers.Items, server)
 	}
