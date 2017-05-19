@@ -298,6 +298,7 @@ func updateSession(session, userId string) {
 
 func incLoginCnt(id string) {
 	R.Incr("user/login/cnt/" + id)
+	R.Set("user/lastlogin/"+id, fmt.Sprint(time.Now().Unix()), time.Second*0)
 }
 
 func session2userId(session string) (userId string, err error) {

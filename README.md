@@ -20,7 +20,6 @@ nohup redis-server redis.conf &
 ```
 cd ss-seb-manager
 ./ss-web-manager
-###
 ```
 
 ### Create the first user the Admininstrator
