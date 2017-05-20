@@ -348,10 +348,24 @@ func mailAddrVerify(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(msg))
 }
 
+func about(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("tpls/us.html", "tpls/head.tpl", "tpls/nav.tpl")
+	checkError(err)
+	t.Execute(w, nil)
+
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	delSession(getSession(r))
+	http.Redirect(w, r, "/login", 302)
+}
+
 func webMain() {
 	http.HandleFunc("/signup", signup)
 	http.HandleFunc("/verifyKey", mailAddrVerify)
+	http.HandleFunc("/us", about)
 	http.HandleFunc("/login", login)
+	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)
 	http.HandleFunc("/new_user", newUser)

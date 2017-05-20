@@ -346,3 +346,7 @@ func verifyMailAddr(k string) string {
 	checkError(err)
 	return "Congratulation Your Email Verified!"
 }
+
+func delSession(session string) {
+	checkError(R.Del("session/" + session).Err())
+}
