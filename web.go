@@ -360,11 +360,23 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", 302)
 }
 
+func userEnable(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("disable"))
+}
+
+func userDelete(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("ok"))
+}
+
 func webMain() {
 	http.HandleFunc("/signup", signup)
 	http.HandleFunc("/verifyKey", mailAddrVerify)
 	http.HandleFunc("/us", about)
 	http.HandleFunc("/login", login)
+	http.HandleFunc("/user/enable", userEnable)
+	http.HandleFunc("/user/delete", userDelete)
+	http.HandleFunc("/server/enable", userEnable)
+	http.HandleFunc("/server/delete", userDelete)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)

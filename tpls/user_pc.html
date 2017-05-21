@@ -142,6 +142,7 @@
                 });
             });
     </script>
+
     <script>
         // 创建图表
         function createKendoBarChart(conf){
@@ -152,7 +153,7 @@
                 theme : 'bootstrap',
                 categoryAxis : {
                     majorGridLines : {
-                        visible: false
+                        visible: false 
                     },
                     categories : conf.data.categories
                 },
@@ -161,12 +162,12 @@
                 },
                 series : conf.data.series,
                 valueAxis : {
-                    max: 200,
+                    max: 200000,
                     line: {
-                        visible: false
+                        visible: true
                     },
                     minorGridLines: {
-                        visible: false
+                        visible: true 
                     },
                     labels : {
                         rotation: "auto"
