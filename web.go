@@ -361,11 +361,27 @@ func logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func userEnable(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("disable"))
+	r.ParseForm()
+	uid := r.FormValue("uid")
+	if uid == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if userSuspend(uid) {
+		w.Write([]byte("enable"))
+	} else {
+		w.Write([]byte("disable"))
+	}
 }
 
 func userDelete(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("ok"))
+	r.ParseForm()
+	uid := r.FormValue("uid")
+	if uid == "" {
+		http.NotFound(w, r)
+		return
+	}
+	userDel(uid)
 }
 
 func webMain() {

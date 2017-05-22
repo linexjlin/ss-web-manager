@@ -202,7 +202,7 @@
     
     <script>
 	function user_enable(id) {
-		$.get('/user/enable?uid'+id, function (data) {
+		$.get('/user/enable?uid='+id, function (data) {
 			if (data === "enable") {
 				$('#user_'+id).removeClass('btn-inverse');
 				$('#user_'+id).addClass('btn-success');
@@ -215,7 +215,7 @@
 	};
 
 	function user_delete(id) {
-		$.get('/user/delete?uid'+id, function (data) {
+		$.get('/user/delete?uid='+id, function (data) {
 			if (data === "ok") {
 				$('#user_row_'+id).css({'display':'none'});	
 			} else {
@@ -226,7 +226,7 @@
 	};
 
 	function server_enable(id) {
-		$.get('/server/enable?sid'+id, function (data) {
+		$.get('/server/enable?sid='+id, function (data) {
 			if (data === "enable") {
 				$('#server_'+id).removeClass('btn-inverse');
 				$('#server_'+id).addClass('btn-success');
@@ -241,7 +241,7 @@
 
 	function server_delete(id) {
 		console.log(id);
-		$.get('/server/delete?sid'+id, function (data) {
+		$.get('/server/delete?sid='+id, function (data) {
 			if (data === "ok") {
 				$('#server_row_'+id).css({'display':'none'});	
 			} else {

@@ -350,3 +350,30 @@ func verifyMailAddr(k string) string {
 func delSession(session string) {
 	checkError(R.Del("session/" + session).Err())
 }
+
+//odd number for disable
+func userSuspend(uid string) bool {
+	val, err := R.Incr("user/suspend/" + uid).Result()
+	checkError(err)
+	return val%2 == 0
+}
+
+func userDel(uid string) bool {
+	port, err := R.Get("user/ss/port/" + uid).Result()
+	checkError(err)
+	ks, err := R.Keys("user*/" + uid).Result()
+	checkError(err)
+	for _, k := range ks {
+		fmt.Println("key:", k, "deleted!")
+		R.Del(k)
+	}
+
+	ks, err = R.Keys("*/" + port).Result()
+	checkError(err)
+	for _, k := range ks {
+		fmt.Println("key:", k, "deleted!")
+		R.Del(k)
+	}
+	return true
+
+}
