@@ -375,5 +375,22 @@ func userDel(uid string) bool {
 		R.Del(k)
 	}
 	return true
+}
 
+func serverSuspend(sid string) bool {
+	val, err := R.Incr("server/suspend/" + sid).Result()
+	checkError(err)
+	return val%2 == 0
+}
+
+func serverDel(sid string) bool {
+	ks, err := R.Keys("servers/" + sid + "/*").Result()
+	checkError(err)
+	for _, k := range ks {
+		fmt.Println("key:", k, "deleted!")
+		R.Del(k)
+	}
+	err = R.Del("servers/list/" + sid).Err()
+	checkError(err)
+	return true
 }

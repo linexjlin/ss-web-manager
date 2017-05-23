@@ -102,6 +102,11 @@ func UserTrafficDetail(w http.ResponseWriter, r *http.Request) {
 
 func login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
+		_, err := session2userId(getSession(r))
+		if err == nil { // user already login
+			http.Redirect(w, r, "/user", 302)
+			return
+		}
 		t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
 		checkError(err)
 		t.Execute(w, nil)
@@ -384,6 +389,31 @@ func userDelete(w http.ResponseWriter, r *http.Request) {
 	userDel(uid)
 }
 
+func serverEnable(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	sid := r.FormValue("sid")
+	if sid == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	if serverSuspend(sid) {
+		w.Write([]byte("enable"))
+	} else {
+		w.Write([]byte("disable"))
+	}
+}
+
+func serverDelete(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	sid := r.FormValue("sid")
+	if sid == "" {
+		http.NotFound(w, r)
+		return
+	}
+	serverDel(sid)
+}
+
 func webMain() {
 	http.HandleFunc("/signup", signup)
 	http.HandleFunc("/verifyKey", mailAddrVerify)
@@ -391,8 +421,8 @@ func webMain() {
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/user/enable", userEnable)
 	http.HandleFunc("/user/delete", userDelete)
-	http.HandleFunc("/server/enable", userEnable)
-	http.HandleFunc("/server/delete", userDelete)
+	http.HandleFunc("/server/enable", serverEnable)
+	http.HandleFunc("/server/delete", serverDelete)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)
