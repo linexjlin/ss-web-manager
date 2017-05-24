@@ -25,4 +25,3 @@ cd ss-seb-manager
 ### Create the first user the Admininstrator
 
 Open the browser, open link http://127.0.0.1:8033/new_user 
-

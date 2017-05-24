@@ -386,7 +386,9 @@ func userDelete(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	userDel(uid)
+	if userDel(uid) {
+		w.Write([]byte("ok"))
+	}
 }
 
 func serverEnable(w http.ResponseWriter, r *http.Request) {
@@ -411,7 +413,9 @@ func serverDelete(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	serverDel(sid)
+	if serverDel(sid) {
+		w.Write([]byte("ok"))
+	}
 }
 
 func webMain() {

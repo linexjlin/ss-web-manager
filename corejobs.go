@@ -26,6 +26,20 @@ func runUpdateStat() {
 	}
 }
 
+func deletePort(port string) {
+	servers, err := getServerIds()
+	checkError(err)
+	for _, server := range servers {
+		ret, err := R.MGet("servers/"+server+"/ip", "servers/"+server+"/managerPort").Result()
+		checkError(err)
+		serverStr := ret[0].(string) + ":" + ret[1].(string)
+		mmu := ssmmu.NewSSMMU("udp", serverStr)
+		iport, err := strconv.Atoi(port)
+		checkError(err)
+		mmu.Remove(iport)
+	}
+}
+
 func addNewPort() {
 	servers, err := getServerIds()
 	checkError(err)
@@ -36,13 +50,13 @@ func addNewPort() {
 		ret, err := R.MGet("servers/"+server+"/ip", "servers/"+server+"/managerPort").Result()
 		checkError(err)
 		serverStr := ret[0].(string) + ":" + ret[1].(string)
-		//fmt.Println("serverStr:", serverStr)
-		//mmu := ssmmu.NewSSMMU("udp", serverStr)
 		mmu := ssmmu.NewSSMMU("udp", serverStr)
 
 		for _, id := range uIds {
 			port, err := R.Get("user/ss/port/" + id).Result()
-			checkError(err)
+			if err != nil {
+				continue
+			}
 			intPort, err := strconv.Atoi(port)
 			checkError(err)
 
@@ -51,13 +65,13 @@ func addNewPort() {
 			checkError(err)
 
 			//remove port
-			needRemove := (R.Exists("ss/"+"/port/suspend/"+port).Val() == 1)
+			/*needRemove := (R.Exists("ss/"+"/port/suspend/"+port).Val() == 1)
 			if needRemove {
 				if filled {
 					mmu.Remove(intPort)
 				}
 				continue
-			}
+			}*/
 
 			//add port
 			if filled {
@@ -157,7 +171,6 @@ func updateStat() {
 
 			_, err = R.IncrBy("traffic/all", traf).Result()
 			checkError(err)
-
 		}
 	}
 }

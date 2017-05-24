@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -351,11 +352,35 @@ func delSession(session string) {
 	checkError(R.Del("session/" + session).Err())
 }
 
-//odd number for disable
+//odd number for disable; true active; false: suspend
 func userSuspend(uid string) bool {
-	val, err := R.Incr("user/suspend/" + uid).Result()
+	var active bool
+	ports, err := R.MGet("user/ss/port/"+uid, "user/ss/port/suspend/"+uid).Result()
+	if err != nil {
+		log.Println(err)
+	}
+	var port string
+	if ports[0] != nil {
+		port = ports[0].(string)
+		active = true
+	} else {
+		port = ports[1].(string)
+		active = false
+	}
+
+	if active {
+		R.Set("user/ss/port/suspend/"+uid, port, time.Second*0)
+		R.Del("user/ss/port/" + uid)
+		active = !active
+		deletePort(port)
+	} else {
+		R.Set("user/ss/port/"+uid, port, time.Second*0)
+		R.Del("user/ss/port/suspend/" + uid)
+		active = !active
+	}
+
 	checkError(err)
-	return val%2 == 0
+	return active
 }
 
 func userDel(uid string) bool {
