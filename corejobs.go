@@ -4,6 +4,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -201,7 +202,7 @@ func runServerTrafficLog() {
 			dat.Member = traf
 			fmt.Println("log traf server:", traf)
 
-			checkError(R.ZAdd("servers/"+server+"/traffic/hourly/report/", dat).Err())
+			checkError(R.ZAdd("servers/"+server+"/traffic/hourly/report", dat).Err())
 		}
 		time.Sleep(time.Second * 5)
 	}
@@ -217,5 +218,44 @@ func runAllTrafficLog() {
 
 		checkError(R.ZAdd("traffic/hourly/report", dat).Err())
 		time.Sleep(time.Second * 5)
+	}
+}
+
+func wait2Renewal(uid string, expireTime time.Time) {
+	fmt.Println("next wait", expireTime.Sub(time.Now()).String())
+	time.Sleep(expireTime.Sub(time.Now()))
+	var newTraffic int64
+	packeys, err := R.Keys("user/package/traffic/" + uid + "/own/*").Result()
+	checkError(err)
+	for _, packey := range packeys {
+		traffic, err := R.Get(packey).Int64()
+		checkError(err)
+		newTraffic = newTraffic + traffic
+	}
+	checkError(R.Set("user/package/traffic/all/"+uid, fmt.Sprint(newTraffic), time.Second*0).Err())
+	port, err := R.Get("user/ss/port/" + uid).Result()
+	checkError(err)
+	checkError(R.Set("user/ss/port/traffic/left/"+port, newTraffic, time.Second*0).Err())
+	period, err := R.Get("user/package/type/" + uid).Int64()
+	checkError(err)
+	checkError(R.Set("user/package/expired/"+uid, fmt.Sprint(time.Now().AddDate(0, 0, int(period)).Unix()), time.Second*0).Err())
+
+}
+
+func autoRenewal() {
+	expKeys, err := R.Keys("user/package/expired/*").Result()
+	checkError(err)
+	kvs := KvData{}
+	for _, uepk := range expKeys {
+		expire, err := R.Get(uepk).Result()
+		checkError(err)
+		kvs = append(kvs, &kvData{strings.TrimPrefix(uepk, "user/package/expired/"), Str2Int64(expire)})
+	}
+	sort.Sort(kvs)
+	for _, ue := range kvs {
+		uid := ue.key
+		expTime := time.Unix(ue.val, 0)
+
+		wait2Renewal(uid, expTime)
 	}
 }

@@ -274,6 +274,7 @@ func addUser(name, password, email string, admin bool) error {
 		"user/ss/port/"+id, port,
 		"user/package/type/"+id, fmt.Sprint(gconf.DefaultCycle),
 		"user/package/traffic/all/"+id, fmt.Sprintf("%d", gconf.DefaultTraffic),
+		"user/package/traffic/"+id+"/own/free"+id, fmt.Sprintf("%d", gconf.DefaultTraffic),
 		"user/package/expired/"+id, strconv.FormatInt(time.Now().Add(time.Hour*24*time.Duration(gconf.DefaultCycle)).Unix(), 10),
 		"user/ss/port/traffic/left/"+port, fmt.Sprintf("%d", gconf.DefaultTraffic)).Result()
 	checkError(err)
@@ -289,7 +290,7 @@ func addUser(name, password, email string, admin bool) error {
 		_, err := R.Set("user/admin/"+id, "1", time.Second*0).Result()
 		checkError(err)
 	}
-
+	//todo add wait2renewal here
 	return err
 }
 

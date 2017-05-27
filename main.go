@@ -13,5 +13,6 @@ func main() {
 	go runPortTrafficLog()
 	go runServerTrafficLog()
 	go runAllTrafficLog()
+	go autoRenewal()
 	webMain()
 }
