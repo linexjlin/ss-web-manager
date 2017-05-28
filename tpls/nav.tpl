@@ -7,17 +7,20 @@
                                 <img src="https://o.qcloud.com/static_api/v3/bk/images/logo.png" class="logo"> </a>
                         </div>
                         <ul class="nav navbar-nav pull-left m0">
-                            <li class="active"><a href="javascript:void(0);">首页</a></li>
-                            <li><a href="javascript:void(0);">关于</a></li>
-                            <li><a href="javascript:void(0);">联系我们</a></li>
+                            <li class="inactive"><a href="/login"> <i class="fa fa-sign-in"></i> 登录</a></li>
+                            <li class="inactive"><a href="/signup"> <i class="fa fa-pencil-square-o"></i>  注册</a></li>
+                            <li class="inactive"><a href="/us"> <i class="fa fa-group"></i>  关于</a></li>
                         </ul>
                         <div class="navbar-header pull-right">
                             <ul class="nav">
                                 <li class="user-info">
                                     <a href="javascript:;">
-                                        <img class="img-rounded" src="https://o.qcloud.com/static_api/v3/components/horizontal_nav1/images/avatar.png">
+					<i class="fa fa-user"></i>
 					<span>{{.Name}}</span>
                                     </a>
+				    <a href="/logout">
+					<i class="fa fa-sign-out"></i>
+				    </a>
                                 </li>
                             </ul>
                         </div>

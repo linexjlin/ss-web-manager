@@ -6,6 +6,8 @@ import (
 	"html/template"
 	"net/http"
 	"time"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 type UserBasicInfo struct {
@@ -33,7 +35,7 @@ type UserServes struct {
 func user(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
-		http.Redirect(w, r, "/login", 301)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 
@@ -51,10 +53,11 @@ func user(w http.ResponseWriter, r *http.Request) {
 
 //Histogram data struct
 type HistoGramData struct {
-	Code    int    `json:"code"`
-	Result  bool   `json:"result"`
-	Message string `json:"message"`
-	Data    HData  `json:"data"`
+	Code    int     `json:"code"`
+	Result  bool    `json:"result"`
+	Message string  `json:"message"`
+	YMax    float64 `json:"ymax"`
+	Data    HData   `json:"data"`
 }
 
 type HData struct {
@@ -71,14 +74,14 @@ func getUserHisto(id string) (h HistoGramData) {
 	h.Code = 0
 	h.Result = true
 	h.Message = "success"
-	dats, err := getUserTrafficDetail(id)
+	x, y, err := getUserTrafficDetail(id)
 	checkError(err)
-	hs := HSeries{Name: "流量详细"}
-	for t, io := range *dats {
-		hs.Data = append(hs.Data, round(float64(io)/1024, 3))
-		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).Format("2006-01-02 15:04"))
-		//		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).String())
-	}
+	hs := HSeries{Name: "流量详细(MB/H)"}
+
+	hs.Data = y
+	h.Data.Categories = x
+	h.YMax = y[len(y)-1]
+
 	h.Data.Series = append(h.Data.Series, hs)
 	return h
 }
@@ -100,6 +103,11 @@ func UserTrafficDetail(w http.ResponseWriter, r *http.Request) {
 
 func login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
+		_, err := session2userId(getSession(r))
+		if err == nil { // user already login
+			http.Redirect(w, r, "/user", 302)
+			return
+		}
 		t, err := template.ParseFiles("tpls/login.html", "tpls/head.tpl", "tpls/nav.tpl")
 		checkError(err)
 		t.Execute(w, nil)
@@ -123,6 +131,22 @@ func login(w http.ResponseWriter, r *http.Request) {
 			checkError(err)
 			t.Execute(w, nil)
 		}
+	}
+}
+
+func signup(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		t, err := template.ParseFiles("tpls/signup.html", "tpls/head.tpl", "tpls/nav.tpl")
+		checkError(err)
+		t.Execute(w, nil)
+	}
+	if r.Method == "POST" {
+		r.ParseForm()
+		name := r.FormValue("name")
+		email := r.FormValue("email")
+		password := r.FormValue("password")
+		addUser(name, password, email, false)
+		w.Write([]byte("Singup Success"))
 	}
 }
 
@@ -218,7 +242,7 @@ type TServes struct {
 func servers(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
-		http.Redirect(w, r, "/login", 301)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 	if !isAdmin(userId) {
@@ -241,7 +265,7 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 	needAdmin := nWorld
 	if !nWorld {
 		if err != nil {
-			http.Redirect(w, r, "/login", 301)
+			http.Redirect(w, r, "/login", 302)
 			return
 		}
 		if !isAdmin(userId) {
@@ -272,7 +296,7 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 func newServer(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
-		http.Redirect(w, r, "/login", 301)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 	if !isAdmin(userId) {
@@ -301,11 +325,114 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func genQRcode(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	userId, err := session2userId(getSession(r))
+	if err != nil {
+		http.Redirect(w, r, "/login", 302)
+		return
+	}
+	server := r.FormValue("server")
+	if server == "" {
+		http.NotFound(w, r)
+		return
+	}
+	ssstr := getSSStr(server, userId)
+
+	png, _ := qrcode.Encode(ssstr, qrcode.Medium, 256)
+	w.Write(png)
+}
+
+func mailAddrVerify(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	k := r.FormValue("k")
+	if k == "" {
+		http.NotFound(w, r)
+		return
+	}
+	msg := verifyMailAddr(k)
+	w.Write([]byte(msg))
+}
+
+func about(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("tpls/us.html", "tpls/head.tpl", "tpls/nav.tpl")
+	checkError(err)
+	t.Execute(w, nil)
+
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	delSession(getSession(r))
+	http.Redirect(w, r, "/login", 302)
+}
+
+func userEnable(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	uid := r.FormValue("uid")
+	if uid == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if userSuspend(uid) {
+		w.Write([]byte("enable"))
+	} else {
+		w.Write([]byte("disable"))
+	}
+}
+
+func userDelete(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	uid := r.FormValue("uid")
+	if uid == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if userDel(uid) {
+		w.Write([]byte("ok"))
+	}
+}
+
+func serverEnable(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	sid := r.FormValue("sid")
+	if sid == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	if serverSuspend(sid) {
+		w.Write([]byte("enable"))
+	} else {
+		w.Write([]byte("disable"))
+	}
+}
+
+func serverDelete(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	sid := r.FormValue("sid")
+	if sid == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if serverDel(sid) {
+		w.Write([]byte("ok"))
+	}
+}
+
 func webMain() {
+	http.HandleFunc("/signup", signup)
+	http.HandleFunc("/verifyKey", mailAddrVerify)
+	http.HandleFunc("/us", about)
 	http.HandleFunc("/login", login)
+	http.HandleFunc("/user/enable", userEnable)
+	http.HandleFunc("/user/delete", userDelete)
+	http.HandleFunc("/server/enable", serverEnable)
+	http.HandleFunc("/server/delete", serverDelete)
+	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/user", user)
 	http.HandleFunc("/admin", admin)
 	http.HandleFunc("/new_user", newUser)
+	http.HandleFunc("/qrCode", genQRcode)
 	http.HandleFunc("/new_server", newServer)
 	http.HandleFunc("/api/myservers.json", myservers)
 	http.HandleFunc("/api/mytraffic.json", UserTrafficDetail)

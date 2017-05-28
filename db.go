@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -112,8 +114,8 @@ func getMyServerInfo(servers *UserServes, userId string) error {
 		server.Port = port
 		server.Key = password
 		server.Port = port
-		server.Qrcode = "/myqrcode"
-		server.Status = "active"
+		server.Qrcode = "/qrCode?server=" + s
+		server.Status = "happy"
 
 		servers.Items = append(servers.Items, server)
 	}
@@ -214,18 +216,21 @@ func getMyUsersInfo(ui *TUsers) error {
 	return err
 }
 
-func getUserTrafficDetail(id string) (*map[int64]int64, error) {
+func getUserTrafficDetail(id string) (x []string, y []float64, err error) {
 	port, err := R.Get("user/ss/port/" + id).Result()
 	checkError(err)
-	dats, err := R.ZRangeWithScores("ss/port/traffic/hourly/report/"+port, 0, 31*24).Result()
+	dats, err := R.ZRangeWithScores("ss/port/traffic/hourly/report/"+port, 0, 30*24).Result()
 	checkError(err)
-	data := make(map[int64]int64)
+
 	for _, dat := range dats {
-		var val int64
-		fmt.Sscanf(dat.Member.(string), "%d", &val)
-		data[int64(dat.Score)] = val
+		var traffic int64
+		uTime := int64(dat.Score)
+
+		fmt.Sscanf(dat.Member.(string), "%d", &traffic)
+		x = append(x, time.Unix(uTime, 0).Format("2006-01-02 15:04"))
+		y = append(y, round(float64(traffic)/(1024*1024), 3))
 	}
-	return &data, nil
+	return x, y, nil
 }
 
 func addServer(ip, name, location, managerPort, method string) error {
@@ -251,16 +256,17 @@ func addUser(name, password, email string, admin bool) error {
 	}
 
 	idInt, err := R.Incr("seq/user/id").Result()
+	idInt = idInt + int64(gconf.UserIdStartWith)
 	checkError(err)
 	id := fmt.Sprintf("%d", idInt)
 	portInt, err := R.Incr("seq/user/port").Result()
-	portInt = portInt + 50000
+	portInt = portInt + int64(gconf.SSPortStartWith)
 	port := fmt.Sprintf("%d", portInt)
 
 	checkError(err)
 	sskey := strconv.Itoa(time.Now().Nanosecond())
 
-	ret, err := R.MSet(
+	_, err = R.MSet(
 		"user/list/"+id, "1",
 		"user/name/"+id, name,
 		"user/password/"+id, password,
@@ -269,12 +275,20 @@ func addUser(name, password, email string, admin bool) error {
 		"user/id/"+email, id,
 		"user/ss/password/"+id, sskey,
 		"user/ss/port/"+id, port,
-		"user/package/type/"+id, "monthly",
-		"user/package/traffic/all/"+id, fmt.Sprintf("%d", 1024*1024*1024),
-		"user/package/expired/"+id, strconv.FormatInt(time.Now().Add(time.Hour*24*31).Unix(), 10),
-		"user/ss/port/traffic/left/"+port, fmt.Sprintf("%d", 1024*1024*1024)).Result()
+		"user/package/type/"+id, fmt.Sprint(gconf.DefaultCycle),
+		"user/package/traffic/all/"+id, fmt.Sprintf("%d", gconf.DefaultTraffic),
+		"user/package/traffic/"+id+"/own/free"+id, fmt.Sprintf("%d", gconf.DefaultTraffic),
+		"user/package/expired/"+id, strconv.FormatInt(time.Now().Add(time.Hour*24*time.Duration(gconf.DefaultCycle)).Unix(), 10),
+		"user/ss/port/traffic/left/"+port, fmt.Sprintf("%d", gconf.DefaultTraffic)).Result()
 	checkError(err)
-	fmt.Println(ret)
+
+	//send verify email
+	verifyKey := fmt.Sprintf("%d", time.Now().UnixNano())
+	if sendVerifyMail(name, email, verifyKey) {
+		err = R.Set("email/verify/"+verifyKey, email, time.Hour*24*90).Err()
+		checkError(err)
+	}
+
 	if admin {
 		_, err := R.Set("user/admin/"+id, "1", time.Second*0).Result()
 		checkError(err)
@@ -283,11 +297,12 @@ func addUser(name, password, email string, admin bool) error {
 }
 
 func updateSession(session, userId string) {
-	R.Set("session/"+session, userId, time.Second*600)
+	R.Set("session/"+session, userId, time.Second*6000)
 }
 
 func incLoginCnt(id string) {
 	R.Incr("user/login/cnt/" + id)
+	R.Set("user/lastlogin/"+id, fmt.Sprint(time.Now().Unix()), time.Second*0)
 }
 
 func session2userId(session string) (userId string, err error) {
@@ -307,4 +322,103 @@ func isAdmin(userId string) bool {
 	admin, err := R.Exists("user/admin/" + userId).Result()
 	checkError(err)
 	return admin == 1
+}
+
+func getSSStr(server, userId string) string {
+	dats, err := R.MGet(
+		"servers/"+server+"/ip",
+		"servers/"+server+"/method",
+		"user/ss/password/"+userId,
+		"user/ss/port/"+userId).Result()
+	checkError(err)
+	methodPass := base64.StdEncoding.EncodeToString([]byte(dats[1].(string) + ":" + dats[2].(string)))
+	ssstr := "ss://" + methodPass + "@" + dats[0].(string) + ":" + dats[3].(string) + "#" + server
+	fmt.Println(ssstr)
+	return ssstr
+}
+
+func verifyMailAddr(k string) string {
+	email, err := R.Get("email/verify/" + k).Result()
+	if err != nil {
+		return fmt.Sprintln("No key:", k, "found!")
+	}
+	R.Del("email/verify/" + k)
+	if R.Exists("email/verified/"+email).Val() == 1 {
+		return fmt.Sprintln("Email", "verified")
+	}
+	err = R.Set("email/verified/"+email, fmt.Sprint(time.Now().Unix()), time.Second*0).Err()
+	checkError(err)
+	return "Congratulation Your Email Verified!"
+}
+
+func delSession(session string) {
+	checkError(R.Del("session/" + session).Err())
+}
+
+//odd number for disable; true active; false: suspend
+func userSuspend(uid string) bool {
+	var active bool
+	ports, err := R.MGet("user/ss/port/"+uid, "user/ss/port/suspend/"+uid).Result()
+	if err != nil {
+		log.Println(err)
+	}
+	var port string
+	if ports[0] != nil {
+		port = ports[0].(string)
+		active = true
+	} else {
+		port = ports[1].(string)
+		active = false
+	}
+
+	if active {
+		R.Set("user/ss/port/suspend/"+uid, port, time.Second*0)
+		R.Del("user/ss/port/" + uid)
+		active = !active
+		deletePort(port)
+	} else {
+		R.Set("user/ss/port/"+uid, port, time.Second*0)
+		R.Del("user/ss/port/suspend/" + uid)
+		active = !active
+	}
+
+	checkError(err)
+	return active
+}
+
+func userDel(uid string) bool {
+	port, err := R.Get("user/ss/port/" + uid).Result()
+	checkError(err)
+	ks, err := R.Keys("user*/" + uid).Result()
+	checkError(err)
+	for _, k := range ks {
+		fmt.Println("key:", k, "deleted!")
+		R.Del(k)
+	}
+
+	ks, err = R.Keys("*/" + port).Result()
+	checkError(err)
+	for _, k := range ks {
+		fmt.Println("key:", k, "deleted!")
+		R.Del(k)
+	}
+	return true
+}
+
+func serverSuspend(sid string) bool {
+	val, err := R.Incr("server/suspend/" + sid).Result()
+	checkError(err)
+	return val%2 == 0
+}
+
+func serverDel(sid string) bool {
+	ks, err := R.Keys("servers/" + sid + "/*").Result()
+	checkError(err)
+	for _, k := range ks {
+		fmt.Println("key:", k, "deleted!")
+		R.Del(k)
+	}
+	err = R.Del("servers/list/" + sid).Err()
+	checkError(err)
+	return true
 }

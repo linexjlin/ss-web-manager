@@ -48,7 +48,7 @@
                         </tr>
                     </template>
                     <template id="tpl_users">
-                        <tr id="user_row_#id#">
+                        <tr>
 			    <td style="widtd: 70px;">#id#</td>
                             <td style="widtd: 5%;">#name#</td>
                             <td style="widtd: 5%;">#ptype#</td>
@@ -62,9 +62,10 @@
                             <td style="widtd: 5%;">#sskey#</td>
                             <td style="widtd: 5%;">#used#</td>
                             <td>
+				<!--a href="user/ss/active?id=#id#"><button class="btn btn-xs btn-success" title="激活"> <i class="glyphicon glyphicon-ok"></i></button></a-->
 				<a href="javascript:user_enable(#id#);"><button  id= "user_#id#" class="btn btn-xs btn-success" title="激活"> <i class="glyphicon glyphicon-ok"></i></button></a>
 				<a href="user/ss/edit?id=#id#"><button class="btn btn-xs btn-warning" title="修改"> <i class="glyphicon glyphicon-edit"></i></button></a>
-				<a href="javascript:user_delete(#id#);"><button class="btn btn-xs btn-danger" title="删除"> <i class="glyphicon glyphicon-remove"></i></button></a>
+				<a href="user/ss/remove?id=#id#"><button class="btn btn-xs btn-danger" title="删除"> <i class="glyphicon glyphicon-remove"></i></button></a>
                             </td>
                         </tr>
                     </template>
@@ -110,7 +111,7 @@
                         </tr>
                     </template>
                     <template id="tpl_servers">
-                        <tr id="server_row_#name#">
+                        <tr>
 
 			    <td style="widtd: 70px;">#name#</td>
                             <td style="widtd: 5%;">#location#</td>
@@ -120,9 +121,9 @@
                             <td style="widtd: 5%;">#status#</td>
                             <td style="widtd: 5%;">#traffic#</td>
                             <td>
-				    <a href="javascript:server_enable('#name#')"> <button id="server_#name#" class="btn btn-xs btn-success"> <i class="glyphicon glyphicon-ok"></i> </button> </a>
-				    <a> <button class="btn btn-xs btn-warning"> <i class="glyphicon glyphicon-edit"></i> </button> </a>
-				    <a href="javascript:server_delete('#name#')"> <button class="btn btn-xs btn-danger"> <i class="glyphicon glyphicon-remove"></i> </button> </a>
+                                <button class="btn btn-xs btn-success"> <i class="glyphicon glyphicon-ok"></i> </button>
+                                <button class="btn btn-xs btn-warning"> <i class="glyphicon glyphicon-edit"></i> </button>
+                                <button class="btn btn-xs btn-danger"> <i class="glyphicon glyphicon-remove"></i> </button>
                             </td>
                         </tr>
                     </template>
@@ -202,55 +203,10 @@
     
     <script>
 	function user_enable(id) {
-		$.get('/user/enable?uid='+id, function (data) {
-			if (data === "enable") {
-				$('#user_'+id).removeClass('btn-inverse');
-				$('#user_'+id).addClass('btn-success');
-			} else {
-				$('#user_'+id).removeClass('btn-success');
-				$('#user_'+id).addClass('btn-inverse');
-			}
-
-		});
-	};
-
-	function user_delete(id) {
-		$.get('/user/delete?uid='+id, function (data) {
-			if (data === "ok") {
-				$('#user_row_'+id).css({'display':'none'});	
-			} else {
-				console.log("delete user error "+data);
-			}
-
-		});
-	};
-
-	function server_enable(id) {
-		$.get('/server/enable?sid='+id, function (data) {
-			if (data === "enable") {
-				$('#server_'+id).removeClass('btn-inverse');
-				$('#server_'+id).addClass('btn-success');
-			} else {
-				$('#server_'+id).removeClass('btn-success');
-				$('#server'+id).addClass('btn-inverse');
-			}
-
-
-		});
-	};
-
-	function server_delete(id) {
 		console.log(id);
-		$.get('/server/delete?sid='+id, function (data) {
-			if (data === "ok") {
-				$('#server_row_'+id).css({'display':'none'});	
-			} else {
-				console.log("delete server error "+data);
-			}
-
-		});
-	};
-	
+		$('#user_'+id).removeClass('btn btn-xs btn-inverse');
+	//	document.getElementById("user_1").className("xxxx")
+	}
     </script>
 </body>
 
