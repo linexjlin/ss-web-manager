@@ -53,10 +53,11 @@ func user(w http.ResponseWriter, r *http.Request) {
 
 //Histogram data struct
 type HistoGramData struct {
-	Code    int    `json:"code"`
-	Result  bool   `json:"result"`
-	Message string `json:"message"`
-	Data    HData  `json:"data"`
+	Code    int     `json:"code"`
+	Result  bool    `json:"result"`
+	Message string  `json:"message"`
+	YMax    float64 `json:"ymax"`
+	Data    HData   `json:"data"`
 }
 
 type HData struct {
@@ -73,14 +74,14 @@ func getUserHisto(id string) (h HistoGramData) {
 	h.Code = 0
 	h.Result = true
 	h.Message = "success"
-	dats, err := getUserTrafficDetail(id)
+	x, y, err := getUserTrafficDetail(id)
 	checkError(err)
-	hs := HSeries{Name: "流量详细"}
-	for t, io := range *dats {
-		hs.Data = append(hs.Data, round(float64(io)/1024, 3))
-		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).Format("2006-01-02 15:04"))
-		//		h.Data.Categories = append(h.Data.Categories, time.Unix(t, 0).String())
-	}
+	hs := HSeries{Name: "流量详细(MB/H)"}
+
+	hs.Data = y
+	h.Data.Categories = x
+	h.YMax = y[len(y)-1]
+
 	h.Data.Series = append(h.Data.Series, hs)
 	return h
 }

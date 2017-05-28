@@ -233,6 +233,7 @@ func wait2Renewal(uid string, expireTime time.Time) {
 	}
 	checkError(R.Set("user/package/traffic/all/"+uid, fmt.Sprint(newTraffic), time.Second*0).Err())
 	port, err := R.Get("user/ss/port/" + uid).Result()
+	fmt.Println("xxxxxxx", "user/ss/port/"+uid)
 	checkError(err)
 	checkError(R.Set("user/ss/port/traffic/left/"+port, newTraffic, time.Second*0).Err())
 	period, err := R.Get("user/package/type/" + uid).Int64()

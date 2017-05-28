@@ -216,18 +216,21 @@ func getMyUsersInfo(ui *TUsers) error {
 	return err
 }
 
-func getUserTrafficDetail(id string) (*map[int64]int64, error) {
+func getUserTrafficDetail(id string) (x []string, y []float64, err error) {
 	port, err := R.Get("user/ss/port/" + id).Result()
 	checkError(err)
-	dats, err := R.ZRangeWithScores("ss/port/traffic/hourly/report/"+port, 0, 31*24).Result()
+	dats, err := R.ZRangeWithScores("ss/port/traffic/hourly/report/"+port, 0, 30*24).Result()
 	checkError(err)
-	data := make(map[int64]int64)
+
 	for _, dat := range dats {
-		var val int64
-		fmt.Sscanf(dat.Member.(string), "%d", &val)
-		data[int64(dat.Score)] = val
+		var traffic int64
+		uTime := int64(dat.Score)
+
+		fmt.Sscanf(dat.Member.(string), "%d", &traffic)
+		x = append(x, time.Unix(uTime, 0).Format("2006-01-02 15:04"))
+		y = append(y, round(float64(traffic)/(1024*1024), 3))
 	}
-	return &data, nil
+	return x, y, nil
 }
 
 func addServer(ip, name, location, managerPort, method string) error {
