@@ -259,7 +259,7 @@ func addUser(name, password, email string, admin bool) error {
 	idInt = idInt + int64(gconf.UserIdStartWith)
 	checkError(err)
 	id := fmt.Sprintf("%d", idInt)
-	portInt, err := R.Incr("seq/u0ser/port").Result()
+	portInt, err := R.Incr("seq/user/port").Result()
 	portInt = portInt + int64(gconf.SSPortStartWith)
 	port := fmt.Sprintf("%d", portInt)
 
