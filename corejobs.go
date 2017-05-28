@@ -22,7 +22,7 @@ func runAddNewPort() {
 func runUpdateStat() {
 	for {
 		updateStat()
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 15)
 	}
 }
 
@@ -122,7 +122,7 @@ func updateStat() {
 				fmt.Println("del", kPort)
 				checkError(err)
 			} else {
-				fmt.Println("port:", port, string(rsp))
+				fmt.Println("new stat from", server, string(rsp))
 			}
 
 		}
@@ -137,7 +137,7 @@ func updateStat() {
 			checkError(err)
 
 			incTraf := traf - lastTraffic
-			fmt.Println("incTraf:", incTraf)
+			//fmt.Println("incTraf:", incTraf)
 			if incTraf <= 0 {
 				_, err = R.Set("user/ss/port/lasttraffic/"+server+"/"+port, traf, time.Second*0).Result()
 				checkError(err)
@@ -216,7 +216,7 @@ func runAllTrafficLog() {
 		fmt.Println("log traf all:", traf)
 
 		checkError(R.ZAdd("traffic/hourly/report", dat).Err())
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Hour * 1)
 	}
 }
 
@@ -233,7 +233,7 @@ func wait2Renewal(uid string, expireTime time.Time) {
 	}
 	checkError(R.Set("user/package/traffic/all/"+uid, fmt.Sprint(newTraffic), time.Second*0).Err())
 	port, err := R.Get("user/ss/port/" + uid).Result()
-	fmt.Println("xxxxxxx", "user/ss/port/"+uid)
+	//fmt.Println("xxxxxxx", "user/ss/port/"+uid)
 	checkError(err)
 	checkError(R.Set("user/ss/port/traffic/left/"+port, newTraffic, time.Second*0).Err())
 	period, err := R.Get("user/package/type/" + uid).Int64()
@@ -256,16 +256,18 @@ func autoRenewal() {
 		for _, uepk := range expKeys {
 			expire, err := R.Get(uepk).Int64()
 			checkError(err)
-			if smallestTime == 0 || expire < newSmallestTime {
+
+			if newSmallestTime == 0 || expire < newSmallestTime {
 				newSmallestTime, newUid = expire, strings.TrimPrefix(uepk, "user/package/expired/")
 			}
 		}
 
 		//found new smallestTime
 		if smallestTime != newSmallestTime || uid != newUid {
+			fmt.Println("Found new smallestTime:", newSmallestTime, newUid, smallestTime, uid)
 			smallestTime, uid = newSmallestTime, newUid
 			go wait2Renewal(uid, time.Unix(smallestTime, 0))
 		}
-		time.Sleep(time.Minute * 10)
+		time.Sleep(time.Minute * 30)
 	}
 }
