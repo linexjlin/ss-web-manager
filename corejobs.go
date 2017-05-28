@@ -4,7 +4,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -188,7 +187,7 @@ func runPortTrafficLog() {
 			port := strings.TrimPrefix(pk, "user/ss/port/traffic/all/")
 			checkError(R.ZAdd("ss/port/traffic/hourly/report/"+port, dat).Err())
 		}
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Hour * 1)
 	}
 }
 
@@ -204,7 +203,7 @@ func runServerTrafficLog() {
 
 			checkError(R.ZAdd("servers/"+server+"/traffic/hourly/report", dat).Err())
 		}
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Hour * 1)
 	}
 }
 
@@ -243,19 +242,29 @@ func wait2Renewal(uid string, expireTime time.Time) {
 }
 
 func autoRenewal() {
-	expKeys, err := R.Keys("user/package/expired/*").Result()
-	checkError(err)
-	kvs := KvData{}
-	for _, uepk := range expKeys {
-		expire, err := R.Get(uepk).Result()
+	var smallestTime int64
+	var uid string
+	for {
+		//key to pairs all user's expire time
+		expKeys, err := R.Keys("user/package/expired/*").Result()
 		checkError(err)
-		kvs = append(kvs, &kvData{strings.TrimPrefix(uepk, "user/package/expired/"), Str2Int64(expire)})
-	}
-	sort.Sort(kvs)
-	for _, ue := range kvs {
-		uid := ue.key
-		expTime := time.Unix(ue.val, 0)
 
-		wait2Renewal(uid, expTime)
+		//find new smallestTime
+		var newSmallestTime int64
+		var newUid string
+		for _, uepk := range expKeys {
+			expire, err := R.Get(uepk).Int64()
+			checkError(err)
+			if smallestTime == 0 || expire < newSmallestTime {
+				newSmallestTime, newUid = expire, strings.TrimPrefix(uepk, "user/package/expired/")
+			}
+		}
+
+		//found new smallestTime
+		if smallestTime != newSmallestTime || uid != newUid {
+			smallestTime, uid = newSmallestTime, newUid
+			go wait2Renewal(uid, time.Unix(smallestTime, 0))
+		}
+		time.Sleep(time.Minute * 10)
 	}
 }

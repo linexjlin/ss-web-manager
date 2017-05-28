@@ -290,7 +290,6 @@ func addUser(name, password, email string, admin bool) error {
 		_, err := R.Set("user/admin/"+id, "1", time.Second*0).Result()
 		checkError(err)
 	}
-	//todo add wait2renewal here
 	return err
 }
 
