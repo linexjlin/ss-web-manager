@@ -80,7 +80,11 @@ func getUserHisto(id string) (h HistoGramData) {
 
 	hs.Data = y
 	h.Data.Categories = x
-	h.YMax = y[len(y)-1]
+	if len(y) == 0 {
+		h.YMax = 0
+	} else {
+		h.YMax = y[len(y)-1]
+	}
 
 	h.Data.Series = append(h.Data.Series, hs)
 	return h
