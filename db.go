@@ -245,7 +245,7 @@ func addServer(ip, name, location, managerPort, method string) error {
 }
 
 func addUser(name, password, email string, admin bool) error {
-	if len(name) < 3 {
+	if len(name) < 1 {
 		return errors.New("user Name: " + name + " too short!")
 	}
 	ex1 := (R.Exists("user/id/"+name).Val() == 1)
@@ -259,7 +259,7 @@ func addUser(name, password, email string, admin bool) error {
 	idInt = idInt + int64(gconf.UserIdStartWith)
 	checkError(err)
 	id := fmt.Sprintf("%d", idInt)
-	portInt, err := R.Incr("seq/user/port").Result()
+	portInt, err := R.Incr("seq/u0ser/port").Result()
 	portInt = portInt + int64(gconf.SSPortStartWith)
 	port := fmt.Sprintf("%d", portInt)
 
@@ -277,7 +277,7 @@ func addUser(name, password, email string, admin bool) error {
 		"user/ss/port/"+id, port,
 		"user/package/type/"+id, fmt.Sprint(gconf.DefaultCycle),
 		"user/package/traffic/all/"+id, fmt.Sprintf("%d", gconf.DefaultTraffic),
-		"user/package/traffic/"+id+"/own/free"+id, fmt.Sprintf("%d", gconf.DefaultTraffic),
+		"user/package/traffic/"+id+"/own/free", fmt.Sprintf("%d", gconf.DefaultTraffic),
 		"user/package/expired/"+id, strconv.FormatInt(time.Now().Add(time.Hour*24*time.Duration(gconf.DefaultCycle)).Unix(), 10),
 		"user/ss/port/traffic/left/"+port, fmt.Sprintf("%d", gconf.DefaultTraffic)).Result()
 	checkError(err)

@@ -129,30 +129,26 @@ func updateStat() {
 
 		//write new stat to db.
 		for port, traf := range stat {
-			lastTrafficStr, err := R.Get("user/ss/port/lasttraffic/" + server + "/" + port).Result()
-			if err != nil {
-				lastTrafficStr = "0"
-			}
-			lastTraffic, err := strconv.ParseInt(lastTrafficStr, 10, 64)
+			lastTraffic, err := R.Get("user/ss/port/lasttraffic/" + server + "/" + port).Int64()
+			_, err = R.Set("user/ss/port/lasttraffic/"+server+"/"+port, fmt.Sprint(traf), time.Second*0).Result()
+
 			checkError(err)
+			//fmt.Println("server:", server, "port:", port, "new traf:", traf, "lastTraf:", lastTraffic)
 
 			incTraf := traf - lastTraffic
-			//fmt.Println("incTraf:", incTraf)
+			fmt.Println("incTraf:", incTraf)
 			if incTraf <= 0 {
-				_, err = R.Set("user/ss/port/lasttraffic/"+server+"/"+port, traf, time.Second*0).Result()
 				checkError(err)
 				continue
 			}
-			_, err = R.Set("user/ss/port/lasttraffic/"+server+"/"+port, traf, time.Second*0).Result()
+			left, err := R.DecrBy("user/ss/port/traffic/left/"+port, incTraf).Result()
 			checkError(err)
-			left, err := R.DecrBy("user/ss/port/traffic/left/"+port, traf).Result()
-			checkError(err)
+			fmt.Println("port:", port, "left:", left)
 			if left < 0 {
 				R.Set("ss/"+"/port/suspend/"+port, "1", time.Second*0)
 			}
-			fmt.Println("port:", port, "left:", left)
 
-			serverLeft, err := R.DecrBy("servers/"+server+"/traffic/left", traf).Result()
+			serverLeft, err := R.DecrBy("servers/"+server+"/traffic/left", incTraf).Result()
 			checkError(err)
 			if serverLeft < 0 {
 				R.Set("servers/"+"/suspend/"+server, "1", time.Second*0)
@@ -160,16 +156,16 @@ func updateStat() {
 
 			fmt.Println("server", server, "left:", serverLeft)
 
-			_, err = R.IncrBy("user/ss/port/traffic/all/"+port, traf).Result()
+			_, err = R.IncrBy("user/ss/port/traffic/all/"+port, incTraf).Result()
 			checkError(err)
 
-			_, err = R.IncrBy("servers/"+server+"/traffic/"+port, traf).Result()
+			_, err = R.IncrBy("servers/"+server+"/traffic/"+port, incTraf).Result()
 			checkError(err)
 
-			_, err = R.IncrBy("servers/"+server+"/traffic/all", traf).Result()
+			_, err = R.IncrBy("servers/"+server+"/traffic/all", incTraf).Result()
 			checkError(err)
 
-			_, err = R.IncrBy("traffic/all", traf).Result()
+			_, err = R.IncrBy("traffic/all", incTraf).Result()
 			checkError(err)
 		}
 	}
