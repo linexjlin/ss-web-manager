@@ -1,4 +1,5 @@
 {
+	"Listen":"0.0.0.0:8033"
 	"SSPortStartWith":50000,
 	"UserIdStartWith":10000,
 	"DefaultTraffic":1073741824,

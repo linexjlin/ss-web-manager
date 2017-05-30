@@ -9,6 +9,7 @@ type MailGunConf struct {
 }
 
 type Conf struct {
+	Listen          string
 	SSPortStartWith int
 	UserIdStartWith int
 	DefaultTraffic  int64

@@ -443,8 +443,8 @@ func webMain() {
 	http.HandleFunc("/api/users.json", users)
 	http.HandleFunc("/api/servers.json", servers)
 
-	fmt.Println("listen on 8033")
-	err := http.ListenAndServe(":8033", nil)
+	fmt.Println("listen on", gconf.Listen)
+	err := http.ListenAndServe(gconf.Listen, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
