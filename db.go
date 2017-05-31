@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	humanize "github.com/dustin/go-humanize"
 )
 
 func getUserId(userName string) (string, error) {
@@ -72,7 +74,9 @@ func getAdminServerInfo(sf *TServes) error {
 		s.Ip = fmt.Sprint(vals[0])
 		s.Method = fmt.Sprint(vals[1])
 		s.Location = fmt.Sprint(vals[2])
-		s.Traffic = fmt.Sprint(vals[3])
+		taf, _ := strconv.ParseUint(fmt.Sprint(vals[3]), 10, 64)
+		s.Traffic = humanize.IBytes(taf)
+
 		s.Port = fmt.Sprint(vals[4])
 
 		sf.Items = append(sf.Items, s)

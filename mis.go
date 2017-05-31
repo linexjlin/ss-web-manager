@@ -4,6 +4,8 @@ import (
 	"math"
 	"strconv"
 	"time"
+
+	humanize "github.com/dustin/go-humanize"
 )
 
 func checkError(err error) {
@@ -27,7 +29,7 @@ func unixStr2Str(unixStr string) string {
 		return ""
 	}
 	tm := time.Unix(i, 0)
-	return tm.String()
+	return humanize.Time(tm)
 }
 
 func FloatToString(num float64, accuracy int) string {
