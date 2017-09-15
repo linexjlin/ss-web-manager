@@ -93,7 +93,7 @@ func getUserHisto(id string) (h HistoGramData) {
 func UserTrafficDetail(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 
@@ -157,7 +157,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 func myservers(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 
@@ -173,7 +173,7 @@ func myservers(w http.ResponseWriter, r *http.Request) {
 func admin(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if !isAdmin(userId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 
@@ -214,7 +214,7 @@ func getSession(r *http.Request) string {
 func users(w http.ResponseWriter, r *http.Request) {
 	userId, err := session2userId(getSession(r))
 	if !isAdmin(userId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 
@@ -250,7 +250,7 @@ func servers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !isAdmin(userId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 
@@ -273,7 +273,7 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !isAdmin(userId) {
-			w.WriteHeader(http.StatusUnauthorized)
+			http.Redirect(w, r, "/login", 302)
 			return
 		}
 	}
@@ -304,7 +304,7 @@ func newServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !isAdmin(userId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Redirect(w, r, "/login", 302)
 		return
 	}
 

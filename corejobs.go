@@ -34,6 +34,7 @@ func deletePort(port string) {
 		checkError(err)
 		serverStr := ret[0].(string) + ":" + ret[1].(string)
 		mmu := ssmmu.NewSSMMU("udp", serverStr)
+		defer mmu.Close()
 		iport, err := strconv.Atoi(port)
 		checkError(err)
 		mmu.Remove(iport)
@@ -46,6 +47,7 @@ func addNewPort() {
 	for _, server := range servers {
 		uIds, err := getUserIds()
 		checkError(err)
+		fmt.Println("check server", server)
 
 		ret, err := R.MGet("servers/"+server+"/ip", "servers/"+server+"/managerPort").Result()
 		checkError(err)
@@ -54,6 +56,7 @@ func addNewPort() {
 
 		for _, id := range uIds {
 			port, err := R.Get("user/ss/port/" + id).Result()
+			fmt.Println("check ", id, port)
 			if err != nil {
 				continue
 			}
@@ -75,7 +78,7 @@ func addNewPort() {
 
 			//add port
 			if filled {
-				//fmt.Println(tKey, "exists!")
+				fmt.Println(tKey, "exists!")
 				continue
 			}
 			fmt.Println("New Port", server, port)
@@ -90,6 +93,7 @@ func addNewPort() {
 			}
 
 		}
+		mmu.Close()
 	}
 }
 
@@ -105,6 +109,7 @@ func updateStat() {
 		checkError(err)
 		serverStr := ret[0].(string) + ":" + ret[1].(string)
 		mmu := ssmmu.NewSSMMU("udp", serverStr)
+
 		rsp, err := mmu.Stat(time.Second * 15)
 		if len(rsp) > 6 {
 			data := rsp[6:]
@@ -168,6 +173,7 @@ func updateStat() {
 			_, err = R.IncrBy("traffic/all", incTraf).Result()
 			checkError(err)
 		}
+		mmu.Close()
 	}
 }
 

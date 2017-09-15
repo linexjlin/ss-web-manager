@@ -301,7 +301,7 @@ func addUser(name, password, email string, admin bool) error {
 }
 
 func updateSession(session, userId string) {
-	R.Set("session/"+session, userId, time.Second*6000)
+	R.Set("session/"+session, userId, time.Second*3600*24*30)
 }
 
 func incLoginCnt(id string) {
